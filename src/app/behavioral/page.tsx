@@ -38,6 +38,7 @@ export default function BehavioralCoachPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [timeLeft, setTimeLeft] = useState(120); // 2-Minute STAR timer
   const [transcript, setTranscript] = useState('');
+  const [interimText, setInterimText] = useState('');
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [analysis, setAnalysis] = useState<any | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
@@ -75,6 +76,8 @@ export default function BehavioralCoachPage() {
     generateQuestion(id);
   };
 
+  const isRecordingRef = useRef(false);
+
   const startRecording = async () => {
     if (!question) {
       alert("Please select or generate a question first.");
@@ -83,6 +86,7 @@ export default function BehavioralCoachPage() {
 
     setMicError(null);
     setTranscript('');
+    setInterimText('');
     setTimeLeft(120);
 
     try {
@@ -105,11 +109,21 @@ export default function BehavioralCoachPage() {
     recognition.lang = 'en-US';
 
     recognition.onresult = (event: any) => {
-      let accumulated = '';
-      for (let i = 0; i < event.results.length; i++) {
-        accumulated += event.results[i][0].transcript + ' ';
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript + ' ';
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
       }
-      setTranscript(accumulated.trim());
+
+      if (finalTranscript) {
+        setTranscript((prev) => prev + finalTranscript);
+      }
+      setInterimText(interimTranscript);
     };
 
     recognition.onerror = (event: any) => {
@@ -120,10 +134,12 @@ export default function BehavioralCoachPage() {
     };
 
     recognition.onend = () => {
-      if (recognitionRef.current && isRecording && timeLeft > 0) {
+      if (isRecordingRef.current && timeLeft > 0) {
         try {
           recognition.start();
-        } catch (e) {}
+        } catch (e) {
+          console.error("Speech recognition restart failed", e);
+        }
       }
     };
 
@@ -131,12 +147,14 @@ export default function BehavioralCoachPage() {
     try {
       recognition.start();
       setIsRecording(true);
+      isRecordingRef.current = true;
     } catch (err) {
       console.error("Recognition start failed:", err);
     }
   };
 
   const stopRecording = () => {
+    isRecordingRef.current = false;
     setIsRecording(false);
     if (recognitionRef.current) {
       try {
@@ -144,6 +162,8 @@ export default function BehavioralCoachPage() {
       } catch (e) {}
       recognitionRef.current = null;
     }
+    setTranscript((prev) => (prev + (interimText ? ' ' + interimText : '')).trim());
+    setInterimText('');
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -392,7 +412,7 @@ export default function BehavioralCoachPage() {
               </div>
 
               <div className="min-h-[120px] text-zinc-200 leading-relaxed font-light text-sm border-t border-zinc-800/80 pt-4">
-                {transcript || <span className="text-zinc-500 italic">Listening... Speak your story clearly according to the STAR pillars above.</span>}
+                {(transcript + (interimText ? ' ' + interimText : '')).trim() || <span className="text-zinc-500 italic">Listening... Speak your story clearly according to the STAR pillars above.</span>}
               </div>
             </div>
 

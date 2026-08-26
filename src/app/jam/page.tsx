@@ -31,6 +31,7 @@ export default function JamSimulatorPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
   const [transcript, setTranscript] = useState('');
+  const [interimText, setInterimText] = useState('');
   const [isReviewing, setIsReviewing] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
@@ -106,30 +107,34 @@ export default function JamSimulatorPage() {
     if (!SpeechRecognition) return alert("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
 
     setTranscript('');
+    setInterimText('');
     setTimeLeft(60);
     setIsRecording(true);
     isRecordingRef.current = true;
     setAnalysis(null);
     setIsReviewing(false);
 
-    let finalTranscript = '';
-
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
-    recognition.onresult = (e: any) => {
-      let interim = '';
-      finalTranscript = '';
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          finalTranscript += e.results[i][0].transcript + ' ';
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript + ' ';
         } else {
-          interim += e.results[i][0].transcript;
+          interimTranscript += event.results[i][0].transcript;
         }
       }
-      setTranscript((finalTranscript + interim).trim());
+
+      if (finalTranscript) {
+        setTranscript((prev) => prev + finalTranscript);
+      }
+      setInterimText(interimTranscript);
     };
 
     recognition.onerror = (e: any) => {
@@ -137,11 +142,11 @@ export default function JamSimulatorPage() {
     };
 
     recognition.onend = () => {
-      if (isRecordingRef.current) {
+      if (isRecordingRef.current && timeLeft > 0) {
         try {
           recognition.start();
-        } catch (err) {
-          console.warn("Could not auto-restart speech recognition:", err);
+        } catch (e) {
+          console.error("Speech recognition restart failed", e);
         }
       }
     };
@@ -164,6 +169,8 @@ export default function JamSimulatorPage() {
         recognitionRef.current.stop();
       } catch (e) {}
     }
+    setTranscript((prev) => (prev + (interimText ? ' ' + interimText : '')).trim());
+    setInterimText('');
     setIsReviewing(true);
   };
 
@@ -322,7 +329,7 @@ export default function JamSimulatorPage() {
                     </div>
                   </div>
                   <p className="text-zinc-300 min-h-[120px] text-lg leading-relaxed font-light">
-                    {transcript || <span className="text-zinc-500 italic">Speak clearly into your microphone...</span>}
+                    {(transcript + (interimText ? ' ' + interimText : '')).trim() || <span className="text-zinc-500 italic">Speak clearly into your microphone...</span>}
                   </p>
                 </div>
                 <button onClick={stopRecording} className="w-full bg-red-600 hover:bg-red-500 text-white font-extrabold py-4 rounded-2xl transition-all shadow-lg text-lg hover:-translate-y-1">
