@@ -45,16 +45,91 @@ const CATEGORIES = [
   { id: 'General_Aptitude', label: '🧠 General & Logic' }
 ];
 
-export default function JamTopicSelector({ onTopicSelect }: { onTopicSelect: (topic: string) => void }) {
-  const [activeTab, setActiveTab] = useState<'category' | 'deck' | 'custom'>('category');
+interface JamTopicSelectorProps {
+  onTopicSelect: (topic: string) => void;
+  apiKey?: string | null;
+}
+
+export default function JamTopicSelector({ onTopicSelect, apiKey }: JamTopicSelectorProps) {
+  const [activeTab, setActiveTab] = useState<'ai' | 'deck' | 'custom'>('ai');
+  const [moodTrack, setMoodTrack] = useState('Campus Standard');
   const [category, setCategory] = useState('HR_Interviews');
   const [difficulty, setDifficulty] = useState('Medium');
   const [customInput, setCustomInput] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('');
+  const [aiTopicData, setAiTopicData] = useState<{ topic: string; category: string; hint: string } | null>(null);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
   const pickTopic = (t: string) => {
     setSelectedTopic(t);
     onTopicSelect(t);
+  };
+
+  const handleGenerateAiTopic = async () => {
+    setIsGeneratingAi(true);
+    const key = apiKey || localStorage.getItem('app_gemini_api_key') || localStorage.getItem('app_api_key');
+
+    const prompt = `You are a placement training coordinator specializing in standard 60-second Just-A-Minute (JAM) rounds for engineering college placement drives.
+
+Selected Mood/Track: ${moodTrack}
+
+Generate ONE clear, engaging, and highly articulate JAM topic.
+Strict Rules:
+1. Must be concise (under 12 words).
+2. Must be easy to grasp instantly without needing niche or obscure knowledge.
+3. Ideal for a 60-second impromptu speech.
+4. Output strictly valid JSON: { "topic": string, "category": string, "hint": string }`;
+
+    const candidateModels = [
+      'gemini-3.6-flash',
+      'gemini-3.5-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash'
+    ];
+
+    let topicResult: { topic: string; category: string; hint: string } | null = null;
+
+    for (const model of candidateModels) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json' }
+          })
+        });
+
+        const data = await res.json();
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawText) {
+          const parsed = JSON.parse(rawText);
+          if (parsed.topic) {
+            topicResult = parsed;
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn(`Model ${model} failed, trying fallback...`, e);
+      }
+    }
+
+    if (topicResult) {
+      setAiTopicData(topicResult);
+      pickTopic(topicResult.topic);
+    } else {
+      // Fallback topic if API key missing or network fails
+      const fallback = {
+        topic: "The Role of Innovation in Modern Engineering Solutions",
+        category: moodTrack,
+        hint: "Discuss how creative problem-solving turns technical ideas into real-world applications."
+      };
+      setAiTopicData(fallback);
+      pickTopic(fallback.topic);
+    }
+
+    setIsGeneratingAi(false);
   };
 
   const handleGenerateCategory = () => {
@@ -69,37 +144,107 @@ export default function JamTopicSelector({ onTopicSelect }: { onTopicSelect: (to
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-3xl p-8 shadow-sm space-y-8">
+    <div className="bg-[#121212] border border-zinc-800 rounded-3xl p-8 shadow-sm space-y-8">
       {/* Tab Switcher */}
-      <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
-        {(['category', 'deck', 'custom'] as const).map((tab) => (
+      <div className="flex bg-zinc-950 p-1.5 rounded-2xl border border-zinc-800">
+        {[
+          { id: 'ai', label: '✨ JAM AI' },
+          { id: 'deck', label: '🎲 Master Deck' },
+          { id: 'custom', label: '✍️ Custom Topic' }
+        ].map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-3 rounded-xl text-sm font-bold capitalize transition-all ${
-              activeTab === tab 
-                ? 'bg-white text-blue-600 shadow-sm border border-gray-100' 
-                : 'text-gray-500 hover:text-gray-800'
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex-1 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              activeTab === tab.id 
+                ? 'bg-white text-black shadow-sm border border-transparent' 
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
-            {tab === 'category' ? '📁 Categories' : tab === 'deck' ? '🎲 Master Deck' : '✍️ Custom Topic'}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {activeTab === 'category' && (
+      {/* TAB 1: ✨ JAM AI */}
+      {activeTab === 'ai' && (
         <div className="space-y-6">
           <div>
-            <label className="text-xs font-extrabold text-gray-400 uppercase tracking-widest block mb-3">Topic Domain</label>
-            <div className="grid grid-cols-2 gap-3">
+            <label className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest block mb-3">
+              Select AI Track / Mood
+            </label>
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                'Campus Standard',
+                'Tech & Innovation',
+                'Abstract & Logic',
+                'Personal & Behavioral'
+              ].map((mood) => (
+                <button
+                  key={mood}
+                  onClick={() => setMoodTrack(mood)}
+                  className={`py-3 px-4 rounded-xl text-xs font-bold border text-left transition-all ${
+                    moodTrack === mood
+                      ? 'bg-white text-black border-transparent shadow-sm'
+                      : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                  }`}
+                >
+                  {mood}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleGenerateAiTopic}
+            disabled={isGeneratingAi}
+            className="w-full bg-white text-black font-extrabold py-3.5 rounded-xl hover:bg-zinc-200 transition-all text-sm shadow-md flex items-center justify-center gap-2"
+          >
+            {isGeneratingAi ? (
+              <>
+                <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                Generating Guardrailed Topic...
+              </>
+            ) : (
+              '⚡ Generate AI JAM Topic'
+            )}
+          </button>
+
+          {aiTopicData && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3 animate-fade-in shadow-inner">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 bg-zinc-950 px-2.5 py-0.5 rounded-full border border-zinc-800">
+                  {aiTopicData.category || moodTrack}
+                </span>
+                <span className="text-[10px] font-mono text-zinc-500">60s Optimized</span>
+              </div>
+              <h3 className="text-xl font-bold text-white leading-snug">{aiTopicData.topic}</h3>
+              {aiTopicData.hint && (
+                <p className="text-xs text-zinc-400 italic border-l-2 border-zinc-700 pl-3 leading-relaxed">
+                  💡 Hint: {aiTopicData.hint}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: 🎲 MASTER DECK (INTEGRATED VAULT) */}
+      {activeTab === 'deck' && (
+        <div className="space-y-6">
+          <div>
+            <label className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest block mb-3">
+              Domain Filter
+            </label>
+            <div className="grid grid-cols-2 gap-2.5">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setCategory(cat.id)}
-                  className={`py-3 px-4 rounded-xl text-sm font-semibold border-2 text-left transition-all ${
+                  className={`py-3 px-4 rounded-xl text-xs font-bold border text-left transition-all ${
                     category === cat.id
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-100 text-gray-600 hover:border-gray-200'
+                      ? 'bg-white text-black border-transparent shadow-sm'
+                      : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
                   }`}
                 >
                   {cat.label}
@@ -109,16 +254,18 @@ export default function JamTopicSelector({ onTopicSelect }: { onTopicSelect: (to
           </div>
 
           <div>
-            <label className="text-xs font-extrabold text-gray-400 uppercase tracking-widest block mb-3">Difficulty Level</label>
-            <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest block mb-3">
+              Difficulty Level
+            </label>
+            <div className="grid grid-cols-3 gap-2.5">
               {['Easy', 'Medium', 'Hard'].map((diff) => (
                 <button
                   key={diff}
                   onClick={() => setDifficulty(diff)}
-                  className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${
+                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${
                     difficulty === diff
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-100 text-gray-600 hover:border-gray-200'
+                      ? 'bg-white text-black border-transparent shadow-sm'
+                      : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
                   }`}
                 >
                   {diff}
@@ -127,53 +274,55 @@ export default function JamTopicSelector({ onTopicSelect }: { onTopicSelect: (to
             </div>
           </div>
 
-          <button
-            onClick={handleGenerateCategory}
-            className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-4 rounded-2xl transition-all shadow-md text-base"
-          >
-            Generate Assessment Topic
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <button
+              onClick={handleGenerateCategory}
+              className="flex-1 bg-white text-black font-extrabold py-3.5 rounded-xl hover:bg-zinc-200 transition-colors shadow-md text-xs sm:text-sm"
+            >
+              🎯 Filtered Domain Topic
+            </button>
+            <button
+              onClick={handleGenerateDeck}
+              className="flex-1 bg-zinc-950 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-bold py-3.5 rounded-xl transition-all text-xs sm:text-sm"
+            >
+              🎲 Draw Universal Random Prompt
+            </button>
+          </div>
         </div>
       )}
 
-      {activeTab === 'deck' && (
-        <div className="text-center py-8 space-y-6 bg-gray-50 rounded-2xl border border-gray-100">
-          <div className="text-4xl">🎲</div>
-          <p className="text-sm text-gray-600 max-w-xs mx-auto font-medium leading-relaxed">
-            Draw a random, high-frequency interview prompt from our universal campus placement database.
-          </p>
-          <button
-            onClick={handleGenerateDeck}
-            className="w-3/4 mx-auto block bg-gray-900 hover:bg-gray-800 text-white font-bold py-4 rounded-2xl transition-all shadow-md"
-          >
-            Draw Random Prompt
-          </button>
-        </div>
-      )}
-
+      {/* TAB 3: ✍️ CUSTOM TOPIC */}
       {activeTab === 'custom' && (
         <div className="space-y-4 pt-2">
           <input
             type="text"
             value={customInput}
             onChange={(e) => setCustomInput(e.target.value)}
-            placeholder="Type a specific question provided by your staff..."
-            className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl p-4 text-gray-900 focus:outline-none focus:border-blue-500 transition-all font-medium"
+            placeholder="Type a specific question provided by your placement team..."
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-4 text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition-all font-medium"
           />
           <button
             onClick={() => customInput.trim() && pickTopic(customInput.trim())}
             disabled={!customInput.trim()}
-            className="w-full bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white font-bold py-4 rounded-2xl transition-all text-base"
+            className="w-full bg-white text-black hover:bg-zinc-200 disabled:opacity-50 font-bold py-3.5 rounded-xl transition-colors text-sm"
           >
             Lock Custom Topic
           </button>
         </div>
       )}
 
+      {/* LOCKED TOPIC SUMMARY */}
       {selectedTopic && (
-        <div className="p-5 bg-blue-50 border-2 border-blue-100 rounded-2xl animate-fade-in">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-600 block mb-2">Locked For Session</span>
-          <p className="text-base font-bold text-gray-900 leading-snug">{selectedTopic}</p>
+        <div className="p-5 bg-zinc-900 border border-zinc-800 rounded-2xl animate-fade-in flex items-center justify-between gap-4">
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
+              Locked For 60s Session
+            </span>
+            <p className="text-sm font-bold text-white leading-snug">{selectedTopic}</p>
+          </div>
+          <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full shrink-0">
+            ✓ Ready
+          </span>
         </div>
       )}
     </div>
