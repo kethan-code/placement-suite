@@ -298,9 +298,6 @@ export default function MockHRPage() {
           <div>
             <h1 className="text-2xl font-extrabold text-white">Two-Way Mock HR Interview</h1>
             <p className="text-sm text-zinc-400 mt-1">Real-time voice conversation with AI interviewer & TTS audio playback.</p>
-            <p className="text-xs font-medium text-zinc-500 mt-2 tracking-wide">
-              Engineered by <span className="text-zinc-300 font-semibold">Kethan Sunkara</span> • Interactive AI Screening
-            </p>
           </div>
           <a
             href="/"

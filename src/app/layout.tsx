@@ -23,7 +23,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <footer className="fixed bottom-4 left-6 z-50 pointer-events-none">
+          <p className="text-zinc-500/80 text-xs font-medium tracking-wider">
+            kethan sunkara © 2026
+          </p>
+        </footer>
+      </body>
     </html>
   );
 }

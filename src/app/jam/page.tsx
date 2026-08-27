@@ -252,9 +252,6 @@ export default function JamSimulatorPage() {
               </div>
               <div className="flex items-center">
                 <span className="font-extrabold text-white text-lg tracking-tight">Placement Suite</span>
-                <span className="hidden sm:inline-flex items-center ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-800/80 text-zinc-300 border border-zinc-700/60">
-                  By Kethan Sunkara
-                </span>
               </div>
             </a>
           </div>

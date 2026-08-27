@@ -224,9 +224,6 @@ export default function BehavioralCoachPage() {
           <div>
             <h1 className="text-2xl font-extrabold text-white">STAR Method Behavioral Coach</h1>
             <p className="text-sm text-zinc-400 mt-1">Structure interview answers using Situation, Task, Action, and Result.</p>
-            <p className="text-xs font-medium text-zinc-500 mt-2 tracking-wide">
-              Engineered by <span className="text-zinc-300 font-semibold">Kethan Sunkara</span> • Placement Intelligence Suite
-            </p>
           </div>
           <div className="flex items-center gap-3">
             <a

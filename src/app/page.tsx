@@ -104,13 +104,6 @@ export default function WelcomePage() {
           </Link>
         </div>
       </div>
-
-      {/* Footer Branding */}
-      <footer className="absolute bottom-8 left-0 right-0 text-center pointer-events-none z-20">
-        <p className="text-zinc-600 text-xs tracking-widest lowercase">
-          kethan sunkara
-        </p>
-      </footer>
     </div>
   );
 }
