@@ -26,8 +26,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         {children}
         <footer className="fixed bottom-4 left-6 z-50 pointer-events-none">
-          <p className="text-zinc-500/80 text-xs font-medium tracking-wider">
-            kethan sunkara © 2026
+          <p className="text-zinc-500/80 text-xs font-medium tracking-wider uppercase">
+            BY kethan sunkara © 2026
           </p>
         </footer>
       </body>
