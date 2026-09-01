@@ -12,15 +12,15 @@ const CANDIDATE_MODELS = [
 
 export async function POST(req: Request) {
   try {
-    const { transcript, question, durationSeconds, apiKey } = await req.json();
+    const { transcript, question, scenarioContext, durationSeconds, apiKey } = await req.json();
 
     if (!apiKey) return NextResponse.json({ success: false, error: 'API key missing.' }, { status: 401 });
     if (!transcript) return NextResponse.json({ success: false, error: 'Transcript empty.' }, { status: 400 });
 
-    const systemPrompt = `Evaluate this behavioral interview answer using the STAR method. Respond ONLY with a valid JSON object matching this schema:
+    const systemPrompt = `Evaluate this behavioral interview answer using the STAR method (10% Situation, 15% Task, 55% Action, 20% Result). Pay extra attention to whether the candidate spent adequate time detailing their personal ACTIONS (the 55% core pillar). Respond ONLY with a valid JSON object matching this schema:
     { "overallScore": 8, "starScores": { "situation": 8, "task": 8, "action": 8, "result": 8 }, "feedback": "2 sentences evaluating the answer.", "missingElements": ["string"], "strengths": ["string"], "idealAnswerSnippet": "string" }`;
 
-    const userPrompt = `Question: "${question}"\nDuration: ${durationSeconds}s\nTranscript: "${transcript}"`;
+    const userPrompt = `${scenarioContext ? `Scenario Context: "${scenarioContext}"\n` : ''}Question: "${question}"\nDuration: ${durationSeconds}s\nTranscript: "${transcript}"`;
 
     let lastErrorMsg = 'All model attempts failed.';
 
