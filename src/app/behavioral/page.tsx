@@ -3,31 +3,76 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getScoreTheme } from '@/lib/scoreTheme';
 
 const COMPETENCIES = [
-  { id: 'leadership', label: '👑 Leadership & Ownership', pool: [
-    "Tell me about a time you led a team project when ownership was unclear.",
-    "Describe how you delegated tasks and kept team members accountable.",
-    "Share an instance where you stepped up to resolve a project bottleneck."
-  ]},
-  { id: 'conflict', label: '🤝 Conflict Resolution', pool: [
-    "Tell me about a time you had a conflict with a team member and how you resolved it.",
-    "Describe a situation where you had to persuade someone to see things your way.",
-    "How do you handle working with someone whose work style is completely different from yours?"
-  ]},
-  { id: 'crisis', label: '⚡ Crisis & Deadlines', pool: [
-    "Describe a situation where you had to work under a very tight deadline.",
-    "Tell me about a time when an unforeseen technical crisis disrupted your timeline.",
-    "How do you prioritize deliverables when multiple high-stakes tasks hit at once?"
-  ]},
-  { id: 'failure', label: '💡 Failure & Resilience', pool: [
-    "Describe a situation where you failed at a task. What did you learn?",
-    "Tell me about a time you received critical feedback and how you responded.",
-    "Share a time when a project outcome was disappointing despite your hard work."
-  ]},
-  { id: 'learning', label: '🚀 Rapid Learning', pool: [
-    "Tell me about a time you had to learn a new skill very quickly to complete a project.",
-    "Describe a situation where you worked on a domain you knew nothing about.",
-    "How do you adapt when requirements change drastically midway through a project?"
-  ]}
+  {
+    id: 'leadership',
+    label: 'Leadership & Ownership',
+    icon: (
+      <svg className="w-4 h-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+      </svg>
+    ),
+    pool: [
+      "Tell me about a time you led a team project when ownership was unclear.",
+      "Describe how you delegated tasks and kept team members accountable.",
+      "Share an instance where you stepped up to resolve a project bottleneck."
+    ]
+  },
+  {
+    id: 'conflict',
+    label: 'Conflict Resolution',
+    icon: (
+      <svg className="w-4 h-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+    pool: [
+      "Tell me about a time you had a conflict with a team member and how you resolved it.",
+      "Describe a situation where you had to persuade someone to see things your way.",
+      "How do you handle working with someone whose work style is completely different from yours?"
+    ]
+  },
+  {
+    id: 'crisis',
+    label: 'Crisis & Deadlines',
+    icon: (
+      <svg className="w-4 h-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+      </svg>
+    ),
+    pool: [
+      "Describe a situation where you had to work under a very tight deadline.",
+      "Tell me about a time when an unforeseen technical crisis disrupted your timeline.",
+      "How do you prioritize deliverables when multiple high-stakes tasks hit at once?"
+    ]
+  },
+  {
+    id: 'failure',
+    label: 'Failure & Resilience',
+    icon: (
+      <svg className="w-4 h-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+      </svg>
+    ),
+    pool: [
+      "Describe a situation where you failed at a task. What did you learn?",
+      "Tell me about a time you received critical feedback and how you responded.",
+      "Share a time when a project outcome was disappointing despite your hard work."
+    ]
+  },
+  {
+    id: 'learning',
+    label: 'Rapid Learning',
+    icon: (
+      <svg className="w-4 h-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
+      </svg>
+    ),
+    pool: [
+      "Tell me about a time you had to learn a new skill very quickly to complete a project.",
+      "Describe a situation where you worked on a domain you knew nothing about.",
+      "How do you adapt when requirements change drastically midway through a project?"
+    ]
+  }
 ];
 
 export default function BehavioralCoachPage() {
@@ -159,7 +204,7 @@ export default function BehavioralCoachPage() {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch (e) {}
+      } catch (e) { }
       recognitionRef.current = null;
     }
     setTranscript((prev) => (prev + (interimText ? ' ' + interimText : '')).trim());
@@ -204,12 +249,17 @@ export default function BehavioralCoachPage() {
 
   if (!apiKey) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-6 text-center">
-        <h2 className="text-2xl font-bold mb-2">API Key Required</h2>
-        <p className="text-zinc-400 mb-6">Please connect your Gemini API key on the main page first.</p>
-        <a href="/" className="bg-white text-black font-bold py-3 px-6 rounded-xl hover:bg-zinc-200 transition-colors">
-          Go to Setup
-        </a>
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6 text-center font-sans">
+        <div className="max-w-md w-full bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto text-2xl">
+            🔑
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900">API Key Required</h2>
+          <p className="text-sm text-slate-500">Please connect your Gemini API key on the main page first.</p>
+          <a href="/" className="inline-block bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-sm shadow-amber-500/20 text-sm">
+            Go to Setup
+          </a>
+        </div>
       </div>
     );
   }
@@ -218,129 +268,171 @@ export default function BehavioralCoachPage() {
   const currentStepIndex = Math.min(3, Math.floor(elapsedTime / 30));
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 font-sans p-6 sm:p-10 relative overflow-hidden">
-      <div className="max-w-5xl mx-auto space-y-8 relative z-10">
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-6">
-          <div>
-            <h1 className="text-2xl font-extrabold text-white">STAR Method Behavioral Coach</h1>
-            <p className="text-sm text-zinc-400 mt-1">Structure interview answers using Situation, Task, Action, and Result.</p>
+    <div className="min-h-screen bg-slate-50/50 text-slate-900 font-sans p-6 sm:p-10 relative overflow-hidden flex flex-col justify-between">
+      <div className="max-w-5xl w-full mx-auto space-y-8 relative z-10 flex-1">
+        {/* Top Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-6 gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm shadow-amber-500/20 shrink-0">
+              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">STAR Method Behavioral Coach</h1>
+              <p className="text-sm text-slate-500 mt-0.5">Structure interview answers using Situation, Task, Action, and Result.</p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 shrink-0">
             <a
               href="/mock-hr"
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all"
+              className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 hover:text-slate-900 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5"
             >
-              🎙️ Mock HR
+              <svg className="w-3.5 h-3.5 text-slate-500" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="9" cy="8" r="3.5" />
+                <path d="M2.5 19c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6v1h-13v-1z" />
+                <path d="M17.5 7.5a1 1 0 0 1 1.4-.2 7 7 0 0 1 0 9.4 1 1 0 0 1-1.4-1.4 5 5 0 0 0 0-6.6 1 1 0 0 1 0-1.2z" />
+                <path d="M20 5a1 1 0 0 1 1.4-.2 10.5 10.5 0 0 1 0 14.4 1 1 0 0 1-1.4-1.4 8.5 8.5 0 0 0 0-11.6 1 1 0 0 1 0-1.2z" />
+              </svg>
+              <span>Mock HR</span>
             </a>
             <a
               href="/"
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all"
+              className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 hover:text-slate-900 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5"
             >
-              ← Back to JAM Suite
+              <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+              </svg>
+              <span>Back to JAM Suite</span>
             </a>
           </div>
         </div>
 
         {micError && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-2xl text-sm font-medium">
-            ⚠️ {micError}
+          <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-sm font-medium flex items-center gap-2 shadow-xs">
+            <svg className="w-5 h-5 shrink-0 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>{micError}</span>
           </div>
         )}
 
+        {/* Competencies */}
         <div className="space-y-3">
-          <label className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest block">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
             Target Behavioral Competency
           </label>
           <div className="flex flex-wrap gap-2.5">
-            {COMPETENCIES.map((comp) => (
-              <button
-                key={comp.id}
-                onClick={() => handleSelectCompetency(comp.id)}
-                className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all border ${
-                  activeCompetency === comp.id
-                    ? 'bg-white text-black border-transparent shadow-sm'
-                    : 'bg-zinc-900/80 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-zinc-200'
-                }`}
-              >
-                {comp.label}
-              </button>
-            ))}
+            {COMPETENCIES.map((comp) => {
+              const isSelected = activeCompetency === comp.id;
+              return (
+                <button
+                  key={comp.id}
+                  onClick={() => handleSelectCompetency(comp.id)}
+                  className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all border flex items-center gap-2 cursor-pointer ${
+                    isSelected
+                      ? 'bg-amber-50/80 text-amber-800 border-amber-500 shadow-xs ring-1 ring-amber-500/20'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50/60'
+                  }`}
+                >
+                  <span className={isSelected ? 'text-amber-600' : 'text-slate-400'}>{comp.icon}</span>
+                  <span>{comp.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
+        {/* 4 Pillars Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 space-y-1.5 backdrop-blur-sm">
-            <span className="text-xs font-black text-white bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">S</span>
-            <h4 className="text-xs font-bold text-zinc-200 pt-1">Situation</h4>
-            <p className="text-[11px] text-zinc-400 leading-relaxed">Set the scene and provide necessary background context.</p>
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 space-y-1.5 shadow-xs">
+            <span className="text-xs font-extrabold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200/80">S</span>
+            <h4 className="text-xs font-bold text-slate-900 pt-1">Situation</h4>
+            <p className="text-[11px] text-slate-500 leading-relaxed">Set the scene and provide necessary background context.</p>
           </div>
-          <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 space-y-1.5 backdrop-blur-sm">
-            <span className="text-xs font-black text-white bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">T</span>
-            <h4 className="text-xs font-bold text-zinc-200 pt-1">Task</h4>
-            <p className="text-[11px] text-zinc-400 leading-relaxed">Describe your specific responsibility or objective.</p>
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 space-y-1.5 shadow-xs">
+            <span className="text-xs font-extrabold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200/80">T</span>
+            <h4 className="text-xs font-bold text-slate-900 pt-1">Task</h4>
+            <p className="text-[11px] text-slate-500 leading-relaxed">Describe your specific responsibility or objective.</p>
           </div>
-          <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 space-y-1.5 backdrop-blur-sm">
-            <span className="text-xs font-black text-white bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">A</span>
-            <h4 className="text-xs font-bold text-zinc-200 pt-1">Action</h4>
-            <p className="text-[11px] text-zinc-400 leading-relaxed">Detail the exact steps and decisions you executed.</p>
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 space-y-1.5 shadow-xs">
+            <span className="text-xs font-extrabold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200/80">A</span>
+            <h4 className="text-xs font-bold text-slate-900 pt-1">Action</h4>
+            <p className="text-[11px] text-slate-500 leading-relaxed">Detail the exact steps and decisions you executed.</p>
           </div>
-          <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 space-y-1.5 backdrop-blur-sm">
-            <span className="text-xs font-black text-white bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">R</span>
-            <h4 className="text-xs font-bold text-zinc-200 pt-1">Result</h4>
-            <p className="text-[11px] text-zinc-400 leading-relaxed">Share tangible outcomes, metrics, and learnings.</p>
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 space-y-1.5 shadow-xs">
+            <span className="text-xs font-extrabold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200/80">R</span>
+            <h4 className="text-xs font-bold text-slate-900 pt-1">Result</h4>
+            <p className="text-[11px] text-slate-500 leading-relaxed">Share tangible outcomes, metrics, and learnings.</p>
           </div>
         </div>
 
+        {/* Main Work Area */}
         {!isRecording && !analysis && !isEvaluating && (
           <div>
             {!question ? (
-              <div className="bg-zinc-900 border border-zinc-800 p-12 rounded-3xl text-center space-y-6 shadow-xl">
-                <div className="w-16 h-16 bg-zinc-950 border border-zinc-800 text-zinc-400 rounded-2xl flex items-center justify-center text-3xl mx-auto">
-                  🎯
+              <div className="bg-white border border-slate-200/80 p-12 rounded-3xl text-center space-y-6 shadow-sm">
+                <div className="w-16 h-16 bg-amber-50 border border-amber-200/80 text-amber-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+                  <svg className="w-8 h-8 stroke-current fill-none" viewBox="0 0 24 24" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="6" />
+                    <circle cx="12" cy="12" r="2" />
+                  </svg>
                 </div>
                 <div className="max-w-md mx-auto space-y-2">
-                  <h3 className="text-lg font-bold text-white">No Scenario Active</h3>
-                  <p className="text-xs text-zinc-400 leading-relaxed">
+                  <h3 className="text-lg font-bold text-slate-900">No Scenario Active</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
                     Select a competency domain above and generate an industry-standard behavioral question.
                   </p>
                 </div>
                 <button
                   onClick={() => generateQuestion()}
-                  className="bg-white text-black font-extrabold py-3.5 px-8 rounded-2xl hover:bg-zinc-200 transition-colors shadow-md text-sm"
+                  className="bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-white font-bold py-3.5 px-8 rounded-2xl transition-colors shadow-sm shadow-amber-500/20 text-sm cursor-pointer inline-flex items-center gap-2"
                 >
-                  Generate Behavioral Question
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M14.615 1.595a.75.75 0 01.359.852L12.982 9.75h7.268a.75.75 0 01.548 1.262l-10.5 11.25a.75.75 0 01-1.272-.71l1.992-7.302H3.75a.75.75 0 01-.548-1.262l10.5-11.25a.75.75 0 01.913-.143z" />
+                  </svg>
+                  <span>Generate Behavioral Question</span>
                 </button>
               </div>
             ) : (
-              <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6 shadow-xl relative overflow-hidden">
-                <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+              <div className="bg-white border border-slate-200/80 p-8 rounded-3xl space-y-6 shadow-sm relative overflow-hidden">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 bg-zinc-950 px-3 py-1 rounded-full border border-zinc-800">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200/80">
                       Assigned Scenario
                     </span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-300 bg-zinc-800 px-2.5 py-1 rounded-full border border-zinc-700">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
                       {difficulty}
                     </span>
                   </div>
-                  <span className="text-xs font-mono font-bold text-zinc-400">Target: 120 Seconds</span>
+                  <span className="text-xs font-mono font-bold text-slate-400">Target: 120 Seconds</span>
                 </div>
 
                 <div className="py-2">
-                  <h2 className="text-2xl font-bold text-white leading-snug">{question}</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 leading-snug">{question}</h2>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 pt-2">
                   <button
                     onClick={startRecording}
-                    className="flex-1 bg-white text-black font-extrabold py-4 px-8 rounded-2xl hover:bg-zinc-200 transition-colors shadow-md text-sm flex items-center justify-center gap-2"
+                    className="flex-1 bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-white font-bold py-4 px-8 rounded-2xl transition-colors shadow-sm shadow-amber-500/20 text-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    🎙️ Start 2-Minute STAR Recording
+                    <svg className="w-5 h-5 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2.2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" x2="12" y1="19" y2="22" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span>Start 2-Minute STAR Recording</span>
                   </button>
                   <button
                     onClick={() => generateQuestion()}
-                    className="bg-zinc-950 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-bold py-4 px-6 rounded-2xl transition-all text-sm flex items-center justify-center gap-2"
+                    className="bg-white hover:bg-slate-50 active:scale-[0.99] text-slate-700 border border-slate-200/80 font-bold py-4 px-6 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                   >
-                    🎲 Re-Roll Prompt
+                    <svg className="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Re-Roll Prompt</span>
                   </button>
                 </div>
               </div>
@@ -348,33 +440,34 @@ export default function BehavioralCoachPage() {
           </div>
         )}
 
+        {/* Live Recording */}
         {isRecording && (
-          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+          <div className="bg-white border border-slate-200/80 p-8 rounded-3xl shadow-sm space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
-                <span className="w-3.5 h-3.5 rounded-full bg-red-500 animate-ping"></span>
-                <span className="text-xs font-bold text-red-400 uppercase tracking-widest">Live STAR Recording</span>
+                <span className="w-3.5 h-3.5 rounded-full bg-rose-500 animate-ping"></span>
+                <span className="text-xs font-bold text-rose-600 uppercase tracking-widest">Live STAR Recording</span>
               </div>
-              <span className="text-3xl font-mono font-bold text-white">{timeLeft}s</span>
+              <span className="text-3xl font-mono font-bold text-slate-900">{timeLeft}s</span>
             </div>
 
-            <div className="mb-6 p-4 bg-zinc-900/50 border border-zinc-800 rounded-lg">
-              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
+            <div className="mb-6 p-4 bg-amber-50/40 border border-amber-200/60 rounded-xl">
+              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1">
                 Current Scenario
               </p>
-              <p className="text-lg font-semibold text-white leading-relaxed">
+              <p className="text-lg font-semibold text-slate-900 leading-relaxed">
                 {question}
               </p>
             </div>
 
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-6">
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-6">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Audio Waveform</span>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Audio Waveform</span>
                 <div className="flex items-center gap-1.5 h-6">
                   {[40, 75, 100, 60, 30, 90, 45, 80, 65, 35, 95, 50].map((h, i) => (
                     <span
                       key={i}
-                      className="w-1 bg-white rounded-full animate-pulse"
+                      className="w-1 bg-amber-500 rounded-full animate-pulse"
                       style={{ height: `${h}%`, animationDelay: `${i * 100}ms` }}
                     ></span>
                   ))}
@@ -395,10 +488,10 @@ export default function BehavioralCoachPage() {
                       key={item.step}
                       className={`p-3 rounded-xl border text-center transition-all ${
                         isActive
-                          ? 'bg-white text-black border-transparent font-bold shadow-md'
+                          ? 'bg-amber-500 text-white border-amber-500 font-bold shadow-xs'
                           : isPassed
-                          ? 'bg-zinc-900 border-zinc-700 text-zinc-300'
-                          : 'bg-zinc-950 border-zinc-800 text-zinc-600'
+                            ? 'bg-amber-50 border-amber-200/80 text-amber-800'
+                            : 'bg-white border-slate-200 text-slate-400'
                       }`}
                     >
                       <div className="text-xs font-extrabold">{item.step}</div>
@@ -408,69 +501,78 @@ export default function BehavioralCoachPage() {
                 })}
               </div>
 
-              <div className="min-h-[120px] text-zinc-200 leading-relaxed font-light text-sm border-t border-zinc-800/80 pt-4">
-                {(transcript + (interimText ? ' ' + interimText : '')).trim() || <span className="text-zinc-500 italic">Listening... Speak your story clearly according to the STAR pillars above.</span>}
+              <div className="min-h-[120px] text-slate-800 leading-relaxed font-normal text-sm border-t border-slate-200 pt-4">
+                {(transcript + (interimText ? ' ' + interimText : '')).trim() || <span className="text-slate-400 italic">Listening... Speak your story clearly according to the STAR pillars above.</span>}
               </div>
             </div>
 
             <button
               onClick={stopRecording}
-              className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-2xl transition-all shadow-lg text-sm"
+              className="w-full bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white font-bold py-4 rounded-2xl transition-all shadow-sm shadow-rose-500/20 text-sm cursor-pointer flex items-center justify-center gap-2"
             >
-              ⏹ Stop & Review Transcript
+              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+              <span>Stop & Review Transcript</span>
             </button>
           </div>
         )}
 
+        {/* Review Transcript */}
         {!isRecording && transcript && !analysis && !isEvaluating && (
-          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6">
+          <div className="bg-white border border-slate-200/80 p-8 rounded-3xl space-y-6 shadow-sm">
             <div>
-              <h3 className="text-xl font-bold text-white">Review & Edit Transcript</h3>
-              <p className="text-xs text-zinc-400 mt-1">Make any adjustments before sending to the STAR evaluator.</p>
+              <h3 className="text-xl font-bold text-slate-900">Review & Edit Transcript</h3>
+              <p className="text-xs text-slate-500 mt-1">Make any adjustments before sending to the STAR evaluator.</p>
             </div>
 
             <textarea
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              className="w-full min-h-[180px] bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-zinc-200 focus:outline-none focus:border-zinc-500 transition-all font-light text-sm"
+              className="w-full min-h-[180px] bg-slate-50 border border-slate-200 rounded-2xl p-5 text-slate-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all font-medium text-sm"
             />
 
             <div className="flex gap-4">
               <button
                 onClick={() => { setTranscript(''); setQuestion(''); }}
-                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-4 rounded-2xl transition-all text-sm"
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-2xl transition-all border border-slate-200/80 text-sm cursor-pointer"
               >
                 Discard
               </button>
               <button
                 onClick={evaluateSpeech}
-                className="flex-[2] bg-white text-black font-bold hover:bg-zinc-200 py-4 rounded-2xl transition-colors shadow-md text-sm"
+                className="flex-[2] bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-white font-bold py-4 rounded-2xl transition-colors shadow-sm shadow-amber-500/20 text-sm cursor-pointer flex items-center justify-center gap-2"
               >
-                ✨ Generate STAR Evaluation
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M14.615 1.595a.75.75 0 01.359.852L12.982 9.75h7.268a.75.75 0 01.548 1.262l-10.5 11.25a.75.75 0 01-1.272-.71l1.992-7.302H3.75a.75.75 0 01-.548-1.262l10.5-11.25a.75.75 0 01.913-.143z" />
+                </svg>
+                <span>Generate STAR Evaluation</span>
               </button>
             </div>
           </div>
         )}
 
+        {/* Evaluating */}
         {isEvaluating && (
-          <div className="bg-zinc-900 border border-zinc-800 p-16 rounded-3xl text-center space-y-4">
-            <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <h3 className="text-xl font-bold text-white">Evaluating STAR Structure...</h3>
-            <p className="text-xs text-zinc-400">Grading Situation, Task, Action, and Measurable Result.</p>
+          <div className="bg-white border border-slate-200/80 p-16 rounded-3xl text-center space-y-4 shadow-sm">
+            <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <h3 className="text-xl font-bold text-slate-900">Evaluating STAR Structure...</h3>
+            <p className="text-xs text-slate-500">Grading Situation, Task, Action, and Measurable Result.</p>
           </div>
         )}
 
+        {/* Analysis Results */}
         {analysis && (
           <div className="space-y-6 animate-fade-in">
-            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="bg-white border border-slate-200/80 p-8 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
               <div>
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Evaluation Summary</span>
-                <h3 className="text-xl font-bold text-white mt-1">{question}</h3>
-                <p className="text-sm text-zinc-300 mt-2 max-w-xl leading-relaxed">{analysis.feedback}</p>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Evaluation Summary</span>
+                <h3 className="text-xl font-bold text-slate-900 mt-1">{question}</h3>
+                <p className="text-sm text-slate-600 mt-2 max-w-xl leading-relaxed">{analysis.feedback}</p>
               </div>
-              <div className="text-center bg-zinc-950 border border-zinc-800 rounded-2xl p-6 min-w-[130px] shrink-0">
-                <span className="text-4xl font-extrabold text-white">{analysis.overallScore}<span className="text-sm text-zinc-500">/10</span></span>
-                <span className="text-[10px] font-bold text-zinc-400 uppercase block mt-1">STAR Score</span>
+              <div className="text-center bg-slate-50 border border-slate-200/80 rounded-2xl p-6 min-w-[130px] shrink-0 shadow-xs">
+                <span className="text-4xl font-extrabold text-slate-900">{analysis.overallScore}<span className="text-sm text-slate-400">/10</span></span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase block mt-1">STAR Score</span>
               </div>
             </div>
 
@@ -486,37 +588,37 @@ export default function BehavioralCoachPage() {
                 return (
                   <div
                     key={key}
-                    className={`p-4 rounded-xl border bg-zinc-900/60 backdrop-blur-sm transition-all hover:bg-zinc-900 ${theme.border}`}
+                    className={`p-4 rounded-2xl border bg-white shadow-xs transition-all hover:shadow-sm ${theme.border}`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                         {key}
                       </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${theme.badge}`}>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${theme.badge}`}>
                         {val}/10
                       </span>
                     </div>
                     <div className={`text-3xl font-extrabold ${theme.text}`}>
                       {val}
-                      <span className="text-sm font-normal text-zinc-500">/10</span>
+                      <span className="text-sm font-normal text-slate-400">/10</span>
                     </div>
-                    <p className="text-[11px] text-zinc-500 mt-1">{descriptions[key.toLowerCase()] || 'Metric score'}</p>
+                    <p className="text-[11px] text-slate-500 mt-1">{descriptions[key.toLowerCase()] || 'Metric score'}</p>
                   </div>
                 );
               })}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-3">
-                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Missing / Weak Elements</h4>
-                <ul className="text-xs text-zinc-300 space-y-2 list-disc list-inside">
+              <div className="bg-white border border-slate-200/80 p-6 rounded-2xl space-y-3 shadow-xs">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Missing / Weak Elements</h4>
+                <ul className="text-xs text-slate-700 space-y-2 list-disc list-inside">
                   {analysis.missingElements?.map((m: string, i: number) => <li key={i}>{m}</li>)}
                 </ul>
               </div>
 
-              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-3">
-                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Recommended Rephrasing</h4>
-                <p className="text-xs text-zinc-300 italic border-l-2 border-white pl-3 leading-relaxed">
+              <div className="bg-white border border-slate-200/80 p-6 rounded-2xl space-y-3 shadow-xs">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Recommended Rephrasing</h4>
+                <p className="text-xs text-slate-700 italic border-l-2 border-amber-500 pl-3 py-1 bg-amber-50/40 rounded-r-lg leading-relaxed">
                   "{analysis.idealAnswerSnippet}"
                 </p>
               </div>
@@ -524,13 +626,24 @@ export default function BehavioralCoachPage() {
 
             <button
               onClick={() => { setAnalysis(null); setTranscript(''); setQuestion(''); }}
-              className="w-full bg-white text-black font-bold hover:bg-zinc-200 py-4 rounded-2xl transition-colors text-sm"
+              className="w-full bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-white font-bold py-4 rounded-2xl transition-colors shadow-sm shadow-amber-500/20 text-sm cursor-pointer flex items-center justify-center gap-2"
             >
-              🔄 Practice Another Behavioral Scenario
+              <svg className="w-5 h-5 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2.2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Practice Another Behavioral Scenario</span>
             </button>
           </div>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="w-full max-w-5xl mx-auto py-8 flex justify-center mt-12 text-center shrink-0">
+        <p className="text-slate-400 text-xs tracking-wider uppercase font-semibold">
+          Placement Intelligence Suite • STAR Method Coach
+        </p>
+      </footer>
     </div>
   );
 }
+

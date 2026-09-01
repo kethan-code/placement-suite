@@ -1,6 +1,5 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Mic, Square, Sparkles, RotateCcw } from 'lucide-react';
 import ApiOnboarding from '@/components/ApiOnboarding';
 import JamTopicSelector from '@/components/JamTopicSelector';
 import { getScoreTheme } from '@/lib/scoreTheme';
@@ -168,7 +167,7 @@ export default function JamSimulatorPage() {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch (e) {}
+      } catch (e) { }
     }
     setTranscript((prev) => (prev + (interimText ? ' ' + interimText : '')).trim());
     setInterimText('');
@@ -228,57 +227,78 @@ export default function JamSimulatorPage() {
   history.forEach((h) => { if (h.primaryWeakness && h.primaryWeakness !== 'None') weaknessCount[h.primaryWeakness] = (weaknessCount[h.primaryWeakness] || 0) + 1; });
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 font-sans pb-16 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50/50 text-slate-900 font-sans pb-12 relative overflow-hidden flex flex-col justify-between">
       {/* Top Navbar */}
-      <nav className="bg-[#0a0a0a] border-b border-zinc-800 sticky top-0 z-40">
+      <nav className="bg-white border-b border-slate-200/80 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
           <div className="flex items-center">
-            <a href="/" className="flex items-center group">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-zinc-100 text-black shadow-sm mr-2 group-hover:scale-105 transition-transform">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="18" 
-                  height="18" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2.5" 
-                  strokeLinecap="round" 
+            <a href="/" className="flex items-center group focus:outline-none">
+              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 text-white shadow-sm mr-2.5 group-hover:scale-105 transition-transform">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                  <line x1="12" x2="12" y1="19" y2="22"/>
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" x2="12" y1="19" y2="22" />
                 </svg>
               </div>
               <div className="flex items-center">
-                <span className="font-extrabold text-white text-lg tracking-tight">Placement Suite</span>
+                <span className="font-extrabold text-slate-900 text-lg tracking-tight">Placement Suite</span>
               </div>
             </a>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button onClick={() => setActiveTab('practice')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'practice' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button 
+              onClick={() => setActiveTab('practice')} 
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+                activeTab === 'practice' 
+                  ? 'bg-blue-50/80 text-blue-700 border border-blue-200/80 shadow-xs' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 border border-transparent'
+              }`}
+            >
               JAM Simulator
             </button>
-            <a href="/behavioral" className="px-4 py-2 rounded-xl text-sm font-bold text-zinc-400 hover:text-white transition-all">
+            <a href="/behavioral" className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 transition-all">
               STAR Coach
             </a>
-            <a href="/mock-hr" className="px-4 py-2 rounded-xl text-sm font-bold text-zinc-400 hover:text-white transition-all">
+            <a href="/mock-hr" className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 transition-all">
               Mock HR
             </a>
-            <button onClick={() => setActiveTab('analytics')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'analytics' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}>
+            <button 
+              onClick={() => setActiveTab('analytics')} 
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+                activeTab === 'analytics' 
+                  ? 'bg-blue-50/80 text-blue-700 border border-blue-200/80 shadow-xs' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 border border-transparent'
+              }`}
+            >
               Analytics
             </button>
-            <button onClick={handleDisconnectKey} title="Disconnect Key" className="text-sm text-zinc-500 hover:text-red-400 border border-zinc-800 hover:border-red-500/50 hover:bg-red-500/10 rounded-xl px-3 py-2 transition-all ml-2 flex items-center gap-1.5">
-              <Settings className="w-4 h-4" />
+            <button 
+              onClick={handleDisconnectKey} 
+              title="Disconnect Key" 
+              className="text-xs font-semibold text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 hover:bg-red-50/60 rounded-xl px-3 py-2 transition-all ml-1.5 cursor-pointer inline-flex items-center gap-1.5"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
               <span>Disconnect</span>
             </button>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 mt-10 relative z-10">
+      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 mt-10 relative z-10 flex-1">
         {activeTab === 'practice' && (
           <div className="space-y-6 animate-fade-in">
             {!isRecording && !isReviewing && !isEvaluating && !analysis && (
@@ -287,69 +307,100 @@ export default function JamSimulatorPage() {
                   <JamTopicSelector onTopicSelect={(t) => setTopic(t)} apiKey={apiKey} />
                 </div>
 
-                <div className="md:col-span-5 bg-zinc-900 border border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-8 shadow-xl">
-                  <div className="w-48 h-48 rounded-full border-4 border-zinc-800 flex flex-col items-center justify-center bg-zinc-950 shadow-inner relative">
+                <div className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-8 shadow-sm">
+                  <div className="w-48 h-48 rounded-full border-4 border-slate-100 flex flex-col items-center justify-center bg-white shadow-sm relative">
                     <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" r="44" fill="none" strokeWidth="4" className="stroke-zinc-800" />
-                      <circle cx="50" cy="50" r="44" fill="none" strokeWidth="4" className="stroke-white" strokeDasharray="276" strokeDashoffset="0" />
+                      <circle cx="50" cy="50" r="44" fill="none" strokeWidth="4" className="stroke-slate-200" />
+                      <circle cx="50" cy="50" r="44" fill="none" strokeWidth="4" className="stroke-blue-600" strokeDasharray="276" strokeDashoffset="0" />
                     </svg>
-                    <span className="text-6xl font-extrabold text-white font-mono drop-shadow-md z-10">60</span>
-                    <span className="text-xs uppercase tracking-widest text-zinc-400 font-bold mt-2 z-10">SECONDS</span>
+                    <span className="text-6xl font-extrabold text-slate-900 font-mono drop-shadow-xs z-10">60</span>
+                    <span className="text-xs uppercase tracking-widest text-slate-400 font-bold mt-2 z-10">SECONDS</span>
                   </div>
 
                   <div className="w-full space-y-3">
-                    <button onClick={startRecording} disabled={!topic} className="w-full bg-white text-black font-bold hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
-                      <Mic className="w-5 h-5 text-black" />
+                    <button 
+                      onClick={startRecording} 
+                      disabled={!topic} 
+                      className={`w-full font-bold py-4 rounded-2xl transition-all text-lg flex items-center justify-center gap-2.5 ${
+                        topic 
+                          ? 'bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white shadow-sm shadow-blue-500/20 cursor-pointer' 
+                          : 'bg-slate-100 border border-slate-200/80 text-slate-400 cursor-not-allowed shadow-none'
+                      }`}
+                    >
+                      <svg className="w-5 h-5 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2.2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" x2="12" y1="19" y2="22" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                       <span>Start JAM Session</span>
                     </button>
-                    {!topic && <p className="text-xs text-zinc-400">Pick or generate a topic to unlock the timer.</p>}
+                    {!topic && <p className="text-xs text-slate-500 font-medium">Pick or generate a topic to unlock the timer.</p>}
                   </div>
                 </div>
               </div>
             )}
 
             {isRecording && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-xl space-y-6">
-                <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+              <div className="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                   <div className="flex items-center gap-3">
-                    <span className="w-4 h-4 rounded-full bg-red-500 animate-ping"></span>
-                    <span className="text-sm font-bold text-red-400 uppercase tracking-widest">Live Recording</span>
+                    <span className="w-3.5 h-3.5 rounded-full bg-rose-500 animate-ping"></span>
+                    <span className="text-sm font-bold text-rose-600 uppercase tracking-widest">Live Recording</span>
                   </div>
-                  <span className="text-4xl font-mono font-bold text-white">{timeLeft}s</span>
+                  <span className="text-4xl font-mono font-bold text-slate-900">{timeLeft}s</span>
                 </div>
                 <div className="text-center py-6">
-                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Your Prompt</span>
-                  <h2 className="text-3xl font-extrabold text-white mt-2 drop-shadow-sm">{topic}</h2>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Your Prompt</span>
+                  <h2 className="text-3xl font-extrabold text-slate-900 mt-2 drop-shadow-xs">{topic}</h2>
                 </div>
-                <div className="bg-zinc-950 rounded-2xl p-6 border border-zinc-800 space-y-4">
+                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-zinc-400 uppercase">Speech Capture</span>
-                    <div className="w-32 h-2 bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-white transition-all duration-75" style={{ width: `${audioLevel}%` }}></div>
+                    <span className="text-xs font-bold text-slate-500 uppercase">Speech Capture</span>
+                    <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-600 transition-all duration-75" style={{ width: `${audioLevel}%` }}></div>
                     </div>
                   </div>
-                  <p className="text-zinc-300 min-h-[120px] text-lg leading-relaxed font-light">
-                    {(transcript + (interimText ? ' ' + interimText : '')).trim() || <span className="text-zinc-500 italic">Speak clearly into your microphone...</span>}
+                  <p className="text-slate-800 min-h-[120px] text-lg leading-relaxed font-normal">
+                    {(transcript + (interimText ? ' ' + interimText : '')).trim() || <span className="text-slate-400 italic">Speak clearly into your microphone...</span>}
                   </p>
                 </div>
-                <button onClick={stopRecording} className="w-full bg-red-600 hover:bg-red-500 text-white font-extrabold py-4 rounded-2xl transition-all shadow-lg text-lg hover:-translate-y-1 flex items-center justify-center gap-2">
-                  <Square className="w-5 h-5 fill-current" />
+                <button 
+                  onClick={stopRecording} 
+                  className="w-full bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white font-extrabold py-4 rounded-2xl transition-all shadow-sm shadow-rose-500/20 text-lg cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <rect x="6" y="6" width="12" height="12" rx="2" />
+                  </svg>
                   <span>Finish Speech</span>
                 </button>
               </div>
             )}
 
             {isReviewing && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-xl space-y-6">
+              <div className="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm space-y-6">
                 <div>
-                  <h3 className="text-2xl font-bold text-white">Review Transcript</h3>
-                  <p className="text-sm text-zinc-400 mt-2">Correct any typos before the AI grades your performance.</p>
+                  <h3 className="text-2xl font-bold text-slate-900">Review Transcript</h3>
+                  <p className="text-sm text-slate-500 mt-2">Correct any typos before the AI grades your performance.</p>
                 </div>
-                <textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} className="w-full min-h-[200px] bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-base text-zinc-200 leading-relaxed focus:outline-none focus:border-zinc-500 transition-all" />
+                <textarea 
+                  value={transcript} 
+                  onChange={(e) => setTranscript(e.target.value)} 
+                  className="w-full min-h-[200px] bg-slate-50 border border-slate-200 rounded-2xl p-5 text-base text-slate-800 leading-relaxed focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium" 
+                />
                 <div className="flex gap-4">
-                  <button onClick={() => { setIsReviewing(false); setTopic(''); }} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-4 rounded-2xl transition-all">Discard</button>
-                  <button onClick={submitForEvaluation} className="flex-[2] bg-white text-black font-bold hover:bg-zinc-200 py-4 rounded-2xl transition-colors flex items-center justify-center gap-2">
-                    <Sparkles className="w-4 h-4 text-black" />
+                  <button 
+                    onClick={() => { setIsReviewing(false); setTopic(''); }} 
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-2xl transition-all border border-slate-200/80 cursor-pointer"
+                  >
+                    Discard
+                  </button>
+                  <button 
+                    onClick={submitForEvaluation} 
+                    className="flex-[2] bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold py-4 rounded-2xl transition-colors shadow-sm shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M14.615 1.595a.75.75 0 01.359.852L12.982 9.75h7.268a.75.75 0 01.548 1.262l-10.5 11.25a.75.75 0 01-1.272-.71l1.992-7.302H3.75a.75.75 0 01-.548-1.262l10.5-11.25a.75.75 0 01.913-.143z" />
+                    </svg>
                     <span>Generate AI Diagnostic</span>
                   </button>
                 </div>
@@ -357,24 +408,24 @@ export default function JamSimulatorPage() {
             )}
 
             {isEvaluating && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-20 text-center space-y-6 shadow-xl">
-                <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
-                <h3 className="text-2xl font-bold text-white">Gemini is Analyzing...</h3>
-                <p className="text-zinc-400">Evaluating fluency, structure, and keyword relevance.</p>
+              <div className="bg-white border border-slate-200/80 rounded-3xl p-20 text-center space-y-6 shadow-sm">
+                <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <h3 className="text-2xl font-bold text-slate-900">Gemini is Analyzing...</h3>
+                <p className="text-slate-500">Evaluating fluency, structure, and keyword relevance.</p>
               </div>
             )}
 
             {analysis && (
               <div className="space-y-6 animate-fade-in">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 flex flex-col sm:flex-row items-center justify-between gap-8 shadow-xl">
+                <div className="bg-white border border-slate-200/80 rounded-3xl p-8 flex flex-col sm:flex-row items-center justify-between gap-8 shadow-sm">
                   <div>
-                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Final Report</span>
-                    <h3 className="text-2xl font-extrabold text-white mt-2">{topic}</h3>
-                    <p className="text-base text-zinc-300 mt-3 leading-relaxed max-w-2xl">{analysis.feedback}</p>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Final Report</span>
+                    <h3 className="text-2xl font-extrabold text-slate-900 mt-2">{topic}</h3>
+                    <p className="text-base text-slate-600 mt-3 leading-relaxed max-w-2xl">{analysis.feedback}</p>
                   </div>
-                  <div className="text-center bg-zinc-950 border border-zinc-800 rounded-2xl p-6 min-w-[140px] shrink-0 shadow-inner">
-                    <span className="text-5xl font-black text-white">{analysis.overallScore}<span className="text-lg text-zinc-500">/10</span></span>
-                    <span className="text-xs font-bold text-zinc-400 uppercase block mt-2 tracking-widest">Score</span>
+                  <div className="text-center bg-slate-50 border border-slate-200/80 rounded-2xl p-6 min-w-[140px] shrink-0 shadow-xs">
+                    <span className="text-5xl font-black text-slate-900">{analysis.overallScore}<span className="text-lg text-slate-400">/10</span></span>
+                    <span className="text-xs font-bold text-slate-500 uppercase block mt-2 tracking-widest">Score</span>
                   </div>
                 </div>
 
@@ -389,64 +440,69 @@ export default function JamSimulatorPage() {
                     return (
                       <div
                         key={m.key}
-                        className={`p-4 rounded-xl border bg-zinc-900/60 backdrop-blur-sm transition-all hover:bg-zinc-900 ${theme.border}`}
+                        className={`p-4 rounded-2xl border bg-white shadow-xs transition-all hover:shadow-sm ${theme.border}`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                             {m.label}
                           </span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${theme.badge}`}>
+                          <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${theme.badge}`}>
                             {m.score}/10
                           </span>
                         </div>
                         <div className={`text-3xl font-extrabold ${theme.text}`}>
                           {m.score}
-                          <span className="text-sm font-normal text-zinc-500">/10</span>
+                          <span className="text-sm font-normal text-slate-400">/10</span>
                         </div>
-                        <p className="text-[11px] text-zinc-500 mt-1">{m.desc}</p>
+                        <p className="text-[11px] text-slate-500 mt-1">{m.desc}</p>
                       </div>
                     );
                   })}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6">
+                  <div className="bg-white border border-slate-200/80 p-8 rounded-3xl space-y-6 shadow-sm">
                     <div>
-                      <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">Key Strengths</h4>
-                      <ul className="text-sm text-zinc-300 space-y-3 list-disc list-inside">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Key Strengths</h4>
+                      <ul className="text-sm text-slate-700 space-y-3 list-disc list-inside">
                         {analysis.strengths.map((st, i) => <li key={i}>{st}</li>)}
                       </ul>
                     </div>
-                    <div className="border-t border-zinc-800 pt-6">
-                      <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">Filler Words Used</h4>
+                    <div className="border-t border-slate-100 pt-6">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Filler Words Used</h4>
                       {analysis.fillerWordsDetected?.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
-                          {analysis.fillerWordsDetected.map((w, i) => <span key={i} className="bg-zinc-800 text-zinc-200 border border-zinc-700 text-xs px-3 py-1.5 rounded-lg font-bold">"{w}"</span>)}
+                          {analysis.fillerWordsDetected.map((w, i) => <span key={i} className="bg-slate-100 text-slate-700 border border-slate-200 text-xs px-3 py-1.5 rounded-lg font-bold">"{w}"</span>)}
                         </div>
                       ) : (
-                        <p className="text-sm text-zinc-400">Clean delivery! No filler words detected.</p>
+                        <p className="text-sm text-slate-500">Clean delivery! No filler words detected.</p>
                       )}
                     </div>
                   </div>
 
-                  <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6">
+                  <div className="bg-white border border-slate-200/80 p-8 rounded-3xl space-y-6 shadow-sm">
                     <div>
-                      <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">Areas to Fix</h4>
-                      <ul className="text-sm text-zinc-300 space-y-3 list-disc list-inside">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Areas to Fix</h4>
+                      <ul className="text-sm text-slate-700 space-y-3 list-disc list-inside">
                         {analysis.areasForImprovement.map((a, i) => <li key={i}>{a}</li>)}
                       </ul>
                     </div>
-                    <div className="border-t border-zinc-800 pt-6">
-                      <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">Pro Phrasing</h4>
-                      <p className="text-sm text-zinc-300 italic border-l-2 border-white pl-4 py-2 bg-zinc-950 rounded-r-xl">
+                    <div className="border-t border-slate-100 pt-6">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Pro Phrasing</h4>
+                      <p className="text-sm text-slate-700 italic border-l-2 border-blue-600 pl-4 py-2.5 bg-blue-50/50 rounded-r-xl">
                         "{analysis.improvedSampleSnippet}"
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <button onClick={() => { setAnalysis(null); setTopic(''); }} className="w-full bg-white text-black font-bold hover:bg-zinc-200 py-4 rounded-2xl transition-colors flex items-center justify-center gap-2">
-                  <RotateCcw className="w-4 h-4 text-black" />
+                <button 
+                  onClick={() => { setAnalysis(null); setTopic(''); }} 
+                  className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold py-4 rounded-2xl transition-colors shadow-sm shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-2 text-base"
+                >
+                  <svg className="w-5 h-5 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2.2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
                   <span>Practice Another Session</span>
                 </button>
               </div>
@@ -457,37 +513,37 @@ export default function JamSimulatorPage() {
         {activeTab === 'analytics' && (
           <div className="space-y-6 animate-fade-in">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl shadow-sm text-center">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Total Sessions</span>
-                <div className="text-5xl font-extrabold text-white mt-4">{history.length}</div>
+              <div className="bg-white border border-slate-200/80 p-8 rounded-3xl shadow-sm text-center">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Sessions</span>
+                <div className="text-5xl font-extrabold text-slate-900 mt-4">{history.length}</div>
               </div>
-              <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl shadow-sm text-center">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Average Score</span>
-                <div className="text-5xl font-extrabold text-white mt-4">{averageScore}<span className="text-xl text-zinc-500">/10</span></div>
+              <div className="bg-white border border-slate-200/80 p-8 rounded-3xl shadow-sm text-center">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Average Score</span>
+                <div className="text-5xl font-extrabold text-slate-900 mt-4">{averageScore}<span className="text-xl text-slate-400">/10</span></div>
               </div>
-              <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl shadow-sm text-center">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Top Weakness</span>
-                <div className="text-2xl font-bold text-zinc-300 mt-6">
+              <div className="bg-white border border-slate-200/80 p-8 rounded-3xl shadow-sm text-center">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Top Weakness</span>
+                <div className="text-2xl font-bold text-slate-800 mt-6">
                   {Object.keys(weaknessCount).length > 0 ? Object.entries(weaknessCount).sort((a, b) => b[1] - a[1])[0][0] : 'None'}
                 </div>
               </div>
             </div>
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden">
-              <div className="p-6 border-b border-zinc-800 flex items-center justify-between">
-                <h3 className="font-bold text-white">Session History</h3>
+            <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-sm">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="font-bold text-slate-900">Session History</h3>
                 {history.length > 0 && (
-                  <button onClick={() => { if (confirm("Clear your speech history?")) { setHistory([]); localStorage.removeItem('app_score_history'); } }} className="text-xs text-red-400 hover:text-red-300 transition-colors font-bold">
+                  <button onClick={() => { if (confirm("Clear your speech history?")) { setHistory([]); localStorage.removeItem('app_score_history'); } }} className="text-xs text-rose-600 hover:text-rose-700 transition-colors font-bold cursor-pointer">
                     Clear Records
                   </button>
                 )}
               </div>
               {history.length === 0 ? (
-                <div className="p-16 text-center text-zinc-500">No evaluation history recorded yet.</div>
+                <div className="p-16 text-center text-slate-400">No evaluation history recorded yet.</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-zinc-950 text-xs font-bold text-zinc-400 uppercase border-b border-zinc-800">
+                    <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b border-slate-100">
                       <tr>
                         <th className="p-5">Date</th>
                         <th className="p-5">Topic</th>
@@ -495,17 +551,17 @@ export default function JamSimulatorPage() {
                         <th className="p-5 text-right">Score</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-800 text-zinc-300">
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
                       {history.map((record) => (
-                        <tr key={record.id} className="hover:bg-zinc-800/50 transition-colors">
+                        <tr key={record.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="p-5 font-medium">{record.date}</td>
-                          <td className="p-5 font-bold text-white">{record.topic}</td>
+                          <td className="p-5 font-bold text-slate-900">{record.topic}</td>
                           <td className="p-5 text-center">
-                            <span className="bg-zinc-800 text-zinc-300 border border-zinc-700 text-xs px-3 py-1 rounded-lg font-bold">
+                            <span className="bg-slate-100 text-slate-700 border border-slate-200 text-xs px-3 py-1 rounded-lg font-semibold">
                               {record.primaryWeakness || 'Balanced'}
                             </span>
                           </td>
-                          <td className="p-5 text-right font-black text-white text-lg">
+                          <td className="p-5 text-right font-black text-slate-900 text-lg">
                             {record.overallScore}/10
                           </td>
                         </tr>
@@ -518,6 +574,15 @@ export default function JamSimulatorPage() {
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="w-full max-w-6xl mx-auto py-8 flex justify-center mt-12 text-center shrink-0">
+        <p className="text-slate-400 text-xs tracking-wider uppercase font-semibold">
+          Placement Intelligence Suite • JAM Simulator
+        </p>
+      </footer>
     </div>
   );
 }
+
+
