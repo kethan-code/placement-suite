@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
+import { Settings, Mic, Square, Sparkles, RotateCcw } from 'lucide-react';
 import ApiOnboarding from '@/components/ApiOnboarding';
 import JamTopicSelector from '@/components/JamTopicSelector';
 import { getScoreTheme } from '@/lib/scoreTheme';
@@ -269,8 +270,9 @@ export default function JamSimulatorPage() {
             <button onClick={() => setActiveTab('analytics')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'analytics' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}>
               Analytics
             </button>
-            <button onClick={handleDisconnectKey} title="Disconnect Key" className="text-sm text-zinc-500 hover:text-red-400 border border-zinc-800 hover:border-red-500/50 hover:bg-red-500/10 rounded-xl px-3 py-2 transition-all ml-2">
-              ⚙️ Disconnect
+            <button onClick={handleDisconnectKey} title="Disconnect Key" className="text-sm text-zinc-500 hover:text-red-400 border border-zinc-800 hover:border-red-500/50 hover:bg-red-500/10 rounded-xl px-3 py-2 transition-all ml-2 flex items-center gap-1.5">
+              <Settings className="w-4 h-4" />
+              <span>Disconnect</span>
             </button>
           </div>
         </div>
@@ -296,8 +298,9 @@ export default function JamSimulatorPage() {
                   </div>
 
                   <div className="w-full space-y-3">
-                    <button onClick={startRecording} disabled={!topic} className="w-full bg-white text-black font-bold hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed py-4 rounded-2xl transition-colors text-lg">
-                      🎙️ Start JAM Session
+                    <button onClick={startRecording} disabled={!topic} className="w-full bg-white text-black font-bold hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
+                      <Mic className="w-5 h-5 text-black" />
+                      <span>Start JAM Session</span>
                     </button>
                     {!topic && <p className="text-xs text-zinc-400">Pick or generate a topic to unlock the timer.</p>}
                   </div>
@@ -329,8 +332,9 @@ export default function JamSimulatorPage() {
                     {(transcript + (interimText ? ' ' + interimText : '')).trim() || <span className="text-zinc-500 italic">Speak clearly into your microphone...</span>}
                   </p>
                 </div>
-                <button onClick={stopRecording} className="w-full bg-red-600 hover:bg-red-500 text-white font-extrabold py-4 rounded-2xl transition-all shadow-lg text-lg hover:-translate-y-1">
-                  ⏹ Finish Speech
+                <button onClick={stopRecording} className="w-full bg-red-600 hover:bg-red-500 text-white font-extrabold py-4 rounded-2xl transition-all shadow-lg text-lg hover:-translate-y-1 flex items-center justify-center gap-2">
+                  <Square className="w-5 h-5 fill-current" />
+                  <span>Finish Speech</span>
                 </button>
               </div>
             )}
@@ -344,7 +348,10 @@ export default function JamSimulatorPage() {
                 <textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} className="w-full min-h-[200px] bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-base text-zinc-200 leading-relaxed focus:outline-none focus:border-zinc-500 transition-all" />
                 <div className="flex gap-4">
                   <button onClick={() => { setIsReviewing(false); setTopic(''); }} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-4 rounded-2xl transition-all">Discard</button>
-                  <button onClick={submitForEvaluation} className="flex-[2] bg-white text-black font-bold hover:bg-zinc-200 py-4 rounded-2xl transition-colors">✨ Generate AI Diagnostic</button>
+                  <button onClick={submitForEvaluation} className="flex-[2] bg-white text-black font-bold hover:bg-zinc-200 py-4 rounded-2xl transition-colors flex items-center justify-center gap-2">
+                    <Sparkles className="w-4 h-4 text-black" />
+                    <span>Generate AI Diagnostic</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -438,8 +445,9 @@ export default function JamSimulatorPage() {
                   </div>
                 </div>
 
-                <button onClick={() => { setAnalysis(null); setTopic(''); }} className="w-full bg-white text-black font-bold hover:bg-zinc-200 py-4 rounded-2xl transition-colors">
-                  🔄 Practice Another Session
+                <button onClick={() => { setAnalysis(null); setTopic(''); }} className="w-full bg-white text-black font-bold hover:bg-zinc-200 py-4 rounded-2xl transition-colors flex items-center justify-center gap-2">
+                  <RotateCcw className="w-4 h-4 text-black" />
+                  <span>Practice Another Session</span>
                 </button>
               </div>
             )}
