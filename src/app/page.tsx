@@ -217,7 +217,7 @@ export default function WelcomePage() {
         </div>
 
         {/* Main CTA Button: ~280px width, ~75px height, 25px text */}
-        <div className="mt-6 sm:mt-8 lg:mt-9 mb-2 sm:mb-3 flex justify-center z-10 relative">
+        <div className="mt-6 sm:mt-8 lg:mt-9 mb-4 sm:mb-6 flex justify-center z-10 relative">
           <Link href="/jam" className="focus:outline-none">
             <button className="group relative w-[240px] sm:w-[275px] h-[64px] sm:h-[74px] inline-flex items-center justify-center text-[22px] sm:text-[25px] font-bold text-white bg-[#111318] rounded-full transition-all duration-200 ease-out hover:bg-black hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:scale-[0.98] shadow-md select-none cursor-pointer">
               <span className="flex items-center gap-3">
@@ -230,13 +230,7 @@ export default function WelcomePage() {
           </Link>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="w-full max-w-[1340px] mx-auto py-2 sm:py-3 flex justify-center mt-auto shrink-0">
-        <p className="text-zinc-500 text-[10px] sm:text-[11.5px] tracking-[0.2em] uppercase font-bold">
-          BY KETHAN SUNKARA © 2026
-        </p>
-      </footer>
     </div>
   );
 }
+
