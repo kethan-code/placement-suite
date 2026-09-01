@@ -353,13 +353,60 @@ export default function JamSimulatorPage() {
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Your Prompt</span>
                   <h2 className="text-3xl font-extrabold text-slate-900 mt-2 drop-shadow-xs">{topic}</h2>
                 </div>
-                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-500 uppercase">Speech Capture</span>
-                    <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 transition-all duration-75" style={{ width: `${audioLevel}%` }}></div>
+                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-4">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Speech Capture</span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/80">
+                        <span className={`w-1.5 h-1.5 rounded-full ${audioLevel > 5 ? 'bg-blue-600 animate-ping' : 'bg-blue-400'}`}></span>
+                        {audioLevel > 5 ? 'Speaking...' : 'Listening...'}
+                      </span>
+                    </div>
+
+                    {/* Circular Voice Activity Waveform around Center Microphone */}
+                    <div className="flex items-center justify-center self-center sm:self-auto py-1">
+                      <div className="relative w-16 h-16 flex items-center justify-center">
+                        {/* Outer Ring 3: subtle, larger and slower response */}
+                        <div
+                          className="absolute inset-0 rounded-full border border-blue-400/30 transition-all duration-300 ease-out pointer-events-none"
+                          style={{
+                            transform: `scale(${1.35 + (audioLevel / 100) * 0.7})`,
+                            opacity: 0.2 + (audioLevel / 100) * 0.4
+                          }}
+                        />
+                        {/* Middle Ring 2: smoother delayed response */}
+                        <div
+                          className="absolute inset-0 rounded-full border border-blue-500/40 transition-all duration-200 ease-out pointer-events-none"
+                          style={{
+                            transform: `scale(${1.2 + (audioLevel / 100) * 0.5})`,
+                            opacity: 0.35 + (audioLevel / 100) * 0.45
+                          }}
+                        />
+                        {/* Inner Ring 1: fast noticeable amplitude reaction */}
+                        <div
+                          className="absolute inset-0 rounded-full border border-blue-600/60 bg-blue-500/5 transition-all duration-100 ease-out pointer-events-none"
+                          style={{
+                            transform: `scale(${1.08 + (audioLevel / 100) * 0.32})`,
+                            opacity: 0.5 + (audioLevel / 100) * 0.5
+                          }}
+                        />
+                        {/* Center Microphone */}
+                        <div
+                          className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-500/25 relative z-10 transition-transform duration-100 ease-out"
+                          style={{
+                            transform: `scale(${1 + (audioLevel / 100) * 0.08})`
+                          }}
+                        >
+                          <svg className="w-5 h-5 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2.2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                            <line x1="12" x2="12" y1="19" y2="22" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      </div>
                     </div>
                   </div>
+
                   <p className="text-slate-800 min-h-[120px] text-lg leading-relaxed font-normal">
                     {(transcript + (interimText ? ' ' + interimText : '')).trim() || <span className="text-slate-400 italic">Speak clearly into your microphone...</span>}
                   </p>
