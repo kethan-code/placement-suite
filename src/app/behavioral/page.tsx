@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { getScoreTheme } from '@/lib/scoreTheme';
-<<<<<<< HEAD
+import VoiceVisualizer from '@/components/VoiceVisualizer';
 import { 
   Shield, 
   Users, 
@@ -32,9 +32,6 @@ export interface ScenarioItem {
   actualQuestion: string;
   modelAnswer?: ModelAnswer;
 }
-=======
-import VoiceVisualizer from '@/components/VoiceVisualizer';
->>>>>>> c2fa7f2 (Add ChatGPT-style live voice visualizer across Mock HR, JAM, and STAR Coach modules)
 
 const COMPETENCIES = [
   { 
