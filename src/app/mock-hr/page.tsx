@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { getScoreTheme } from '@/lib/scoreTheme';
+import VoiceVisualizer from '@/components/VoiceVisualizer';
 
 interface ChatMessage {
   id: string;
@@ -40,16 +41,29 @@ export default function MockHRPage() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluation, setEvaluation] = useState<any | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     setApiKey(localStorage.getItem('app_gemini_api_key') || localStorage.getItem('app_api_key'));
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       synthRef.current = window.speechSynthesis;
     }
+
+    return () => {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {});
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -128,6 +142,19 @@ export default function MockHRPage() {
     });
   };
 
+  const cleanupAudio = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+    setAnalyser(null);
+  };
+
   const startListening = async () => {
     setMicError(null);
     setCandidateTranscript('');
@@ -139,6 +166,32 @@ export default function MockHRPage() {
     }
 
     try {
+      // Connect / resume microphone audio stream for ChatGPT-style live voice visualizer
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        if (!mediaStreamRef.current || !mediaStreamRef.current.active) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaStreamRef.current = stream;
+            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioCtx) {
+              const ctx = new AudioCtx();
+              audioContextRef.current = ctx;
+              const analyserNode = ctx.createAnalyser();
+              analyserNode.fftSize = 256;
+              analyserNode.smoothingTimeConstant = 0.8;
+              const source = ctx.createMediaStreamSource(stream);
+              source.connect(analyserNode);
+              analyserRef.current = analyserNode;
+              setAnalyser(analyserNode);
+            }
+          } catch (e) {
+            console.warn("Microphone visualizer stream notice:", e);
+          }
+        } else if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume().catch(() => {});
+        }
+      }
+
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -243,6 +296,7 @@ export default function MockHRPage() {
 
   const handleFinishInterview = async () => {
     stopListening();
+    cleanupAudio();
     if (synthRef.current) synthRef.current.cancel();
 
     if (conversation.length < 2) {
@@ -546,9 +600,12 @@ export default function MockHRPage() {
                     <span className="text-xs font-bold text-purple-700 uppercase tracking-widest">HR Speaking (TTS)</span>
                   </div>
                 ) : isListening ? (
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
-                    <span className="text-xs font-bold text-rose-600 uppercase tracking-widest">Listening to Candidate</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse"></span>
+                      <span className="text-xs font-bold text-purple-700 uppercase tracking-widest">Listening to Candidate</span>
+                    </div>
+                    <VoiceVisualizer analyser={analyser} isListening={isListening} />
                   </div>
                 ) : (
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Processing Turn...</span>

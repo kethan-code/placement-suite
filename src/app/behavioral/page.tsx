@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { getScoreTheme } from '@/lib/scoreTheme';
+<<<<<<< HEAD
 import { 
   Shield, 
   Users, 
@@ -31,6 +32,9 @@ export interface ScenarioItem {
   actualQuestion: string;
   modelAnswer?: ModelAnswer;
 }
+=======
+import VoiceVisualizer from '@/components/VoiceVisualizer';
+>>>>>>> c2fa7f2 (Add ChatGPT-style live voice visualizer across Mock HR, JAM, and STAR Coach modules)
 
 const COMPETENCIES = [
   { 
@@ -234,12 +238,22 @@ export default function BehavioralCoachPage() {
   const [isGeneratingQ, setIsGeneratingQ] = useState(false);
   const [analysis, setAnalysis] = useState<any | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
 
   useEffect(() => {
     setApiKey(localStorage.getItem('app_gemini_api_key') || localStorage.getItem('app_api_key'));
+
+    return () => {
+      if (streamRef.current) streamRef.current.getTracks().forEach((track) => track.stop());
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {});
+      }
+    };
   }, []);
 
   // Timer Countdown
@@ -387,6 +401,18 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        audioContextRef.current = ctx;
+        const analyserNode = ctx.createAnalyser();
+        analyserNode.fftSize = 256;
+        analyserNode.smoothingTimeConstant = 0.8;
+        const src = ctx.createMediaStreamSource(stream);
+        src.connect(analyserNode);
+        analyserRef.current = analyserNode;
+        setAnalyser(analyserNode);
+      }
     } catch (err: any) {
       setMicError("Microphone permission denied. Please allow microphone access in your browser bar.");
       return;
@@ -463,6 +489,12 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+    setAnalyser(null);
   };
 
   const evaluateSpeech = async () => {
@@ -810,12 +842,23 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
 
         {isRecording && activeScenario && (
           <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
-              <div className="flex items-center gap-3">
-                <span className="w-3.5 h-3.5 rounded-full bg-red-500 animate-ping"></span>
-                <span className="text-xs font-bold text-red-400 uppercase tracking-widest">Live STAR Recording</span>
+            <div className="flex justify-between items-center border-b border-zinc-800 pb-4 gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="w-3.5 h-3.5 rounded-full bg-red-500 animate-ping"></span>
+                  <span className="text-xs font-bold text-red-400 uppercase tracking-widest">Live STAR Recording</span>
+                </div>
+                <VoiceVisualizer
+                  analyser={analyser}
+                  isListening={isRecording}
+                  color="#f59e0b"
+                  theme="orange"
+                  barCount={24}
+                  width={120}
+                  height={20}
+                />
               </div>
-              <span className="text-3xl font-mono font-bold text-white">{timeLeft}s</span>
+              <span className="text-3xl font-mono font-bold text-white shrink-0">{timeLeft}s</span>
             </div>
 
             <div className="space-y-3 p-4 bg-zinc-950 border border-zinc-800/80 rounded-2xl">
@@ -828,21 +871,8 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
               </p>
             </div>
 
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-6">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Audio Waveform</span>
-                <div className="flex items-center gap-1.5 h-6">
-                  {[40, 75, 100, 60, 30, 90, 45, 80, 65, 35, 95, 50].map((h, i) => (
-                    <span
-                      key={i}
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: `${h}%`, animationDelay: `${i * 100}ms` }}
-                    ></span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-4 gap-3 pt-2">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-4">
+              <div className="grid grid-cols-4 gap-3">
                 {[
                   { step: 'S', label: 'Situation (10%)' },
                   { step: 'T', label: 'Task (15%)' },
@@ -878,7 +908,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
 
             <button
               onClick={stopRecording}
-              className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-2xl transition-all shadow-lg text-sm flex items-center justify-center gap-2"
+              className="w-full bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-white font-bold py-4 rounded-2xl transition-all shadow-sm shadow-amber-500/20 text-sm cursor-pointer flex items-center justify-center gap-2"
             >
               <Square className="w-4 h-4 text-white fill-white" />
               <span>Stop & Review Transcript</span>

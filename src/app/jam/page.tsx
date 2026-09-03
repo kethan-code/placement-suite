@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ApiOnboarding from '@/components/ApiOnboarding';
 import JamTopicSelector from '@/components/JamTopicSelector';
 import { getScoreTheme } from '@/lib/scoreTheme';
+import VoiceVisualizer from '@/components/VoiceVisualizer';
 
 interface ScoreRecord {
   id: string;
@@ -37,17 +38,26 @@ export default function JamSimulatorPage() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<ScoreRecord[]>([]);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
 
   useEffect(() => {
     const storedKey = localStorage.getItem('app_api_key');
     const storedHistory = localStorage.getItem('app_score_history');
     if (storedKey) setApiKey(storedKey);
     if (storedHistory) setHistory(JSON.parse(storedHistory));
+
+    return () => {
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {});
+      }
+    };
   }, []);
 
   const handleKeySetup = (provider: 'gemini', key: string) => {
@@ -76,14 +86,17 @@ export default function JamSimulatorPage() {
       streamRef.current = stream;
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       audioContextRef.current = ctx;
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 64;
+      const analyserNode = ctx.createAnalyser();
+      analyserNode.fftSize = 256;
+      analyserNode.smoothingTimeConstant = 0.8;
       const src = ctx.createMediaStreamSource(stream);
-      src.connect(analyser);
+      src.connect(analyserNode);
+      analyserRef.current = analyserNode;
+      setAnalyser(analyserNode);
 
-      const buffer = new Uint8Array(analyser.frequencyBinCount);
+      const buffer = new Uint8Array(analyserNode.frequencyBinCount);
       const updateVolume = () => {
-        analyser.getByteFrequencyData(buffer);
+        analyserNode.getByteFrequencyData(buffer);
         const avg = buffer.reduce((a, b) => a + b, 0) / buffer.length;
         setAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));
         animFrameRef.current = requestAnimationFrame(updateVolume);
@@ -97,8 +110,12 @@ export default function JamSimulatorPage() {
   const stopAudio = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
-    if (audioContextRef.current) audioContextRef.current.close();
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(() => {});
+    }
     setAudioLevel(0);
+    analyserRef.current = null;
+    setAnalyser(null);
   };
 
   const startRecording = async () => {
@@ -342,78 +359,37 @@ export default function JamSimulatorPage() {
 
             {isRecording && (
               <div className="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm space-y-6">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-3">
-                    <span className="w-3.5 h-3.5 rounded-full bg-rose-500 animate-ping"></span>
-                    <span className="text-sm font-bold text-rose-600 uppercase tracking-widest">Live Recording</span>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4 gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="w-3.5 h-3.5 rounded-full bg-rose-500 animate-ping"></span>
+                      <span className="text-sm font-bold text-rose-600 uppercase tracking-widest">Live Recording</span>
+                    </div>
+                    <VoiceVisualizer
+                      analyser={analyser}
+                      isListening={isRecording}
+                      color="#2563eb"
+                      theme="blue"
+                      barCount={24}
+                      width={120}
+                      height={20}
+                    />
                   </div>
-                  <span className="text-4xl font-mono font-bold text-slate-900">{timeLeft}s</span>
+                  <span className="text-4xl font-mono font-bold text-slate-900 shrink-0">{timeLeft}s</span>
                 </div>
                 <div className="text-center py-6">
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Your Prompt</span>
                   <h2 className="text-3xl font-extrabold text-slate-900 mt-2 drop-shadow-xs">{topic}</h2>
                 </div>
-                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-4">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Speech Capture</span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/80">
-                        <span className={`w-1.5 h-1.5 rounded-full ${audioLevel > 5 ? 'bg-blue-600 animate-ping' : 'bg-blue-400'}`}></span>
-                        {audioLevel > 5 ? 'Speaking...' : 'Listening...'}
-                      </span>
-                    </div>
-
-                    {/* Circular Voice Activity Waveform around Center Microphone */}
-                    <div className="flex items-center justify-center self-center sm:self-auto py-1">
-                      <div className="relative w-16 h-16 flex items-center justify-center">
-                        {/* Outer Ring 3: subtle, larger and slower response */}
-                        <div
-                          className="absolute inset-0 rounded-full border border-blue-400/30 transition-all duration-300 ease-out pointer-events-none"
-                          style={{
-                            transform: `scale(${1.35 + (audioLevel / 100) * 0.7})`,
-                            opacity: 0.2 + (audioLevel / 100) * 0.4
-                          }}
-                        />
-                        {/* Middle Ring 2: smoother delayed response */}
-                        <div
-                          className="absolute inset-0 rounded-full border border-blue-500/40 transition-all duration-200 ease-out pointer-events-none"
-                          style={{
-                            transform: `scale(${1.2 + (audioLevel / 100) * 0.5})`,
-                            opacity: 0.35 + (audioLevel / 100) * 0.45
-                          }}
-                        />
-                        {/* Inner Ring 1: fast noticeable amplitude reaction */}
-                        <div
-                          className="absolute inset-0 rounded-full border border-blue-600/60 bg-blue-500/5 transition-all duration-100 ease-out pointer-events-none"
-                          style={{
-                            transform: `scale(${1.08 + (audioLevel / 100) * 0.32})`,
-                            opacity: 0.5 + (audioLevel / 100) * 0.5
-                          }}
-                        />
-                        {/* Center Microphone */}
-                        <div
-                          className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-500/25 relative z-10 transition-transform duration-100 ease-out"
-                          style={{
-                            transform: `scale(${1 + (audioLevel / 100) * 0.08})`
-                          }}
-                        >
-                          <svg className="w-5 h-5 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2.2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                            <line x1="12" x2="12" y1="19" y2="22" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
+                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-4">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Speech Capture</span>
                   <p className="text-slate-800 min-h-[120px] text-lg leading-relaxed font-normal">
                     {(transcript + (interimText ? ' ' + interimText : '')).trim() || <span className="text-slate-400 italic">Speak clearly into your microphone...</span>}
                   </p>
                 </div>
                 <button 
                   onClick={stopRecording} 
-                  className="w-full bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white font-extrabold py-4 rounded-2xl transition-all shadow-sm shadow-rose-500/20 text-lg cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold py-4 rounded-2xl transition-all shadow-sm shadow-blue-500/20 text-lg cursor-pointer flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                     <rect x="6" y="6" width="12" height="12" rx="2" />
