@@ -12,7 +12,7 @@ const CANDIDATE_MODELS = [
 
 export async function POST(req: Request) {
   try {
-    const { competency, randomSeed, apiKey } = await req.json();
+    const { competency, difficulty = 'Medium', randomSeed, apiKey } = await req.json();
 
     const key = apiKey || process.env.GEMINI_API_KEY;
     if (!key) {
@@ -21,10 +21,19 @@ export async function POST(req: Request) {
 
     const seed = randomSeed || Math.random();
 
-    const systemPrompt = `You are an expert tech interviewer. Generate a highly specific, B.Tech student-level behavioral interview scenario focused EXCLUSIVELY on the category: "${competency}".
+    const systemPrompt = `You are an expert tech interviewer. Generate a highly specific, B.Tech student-level behavioral interview scenario focused EXCLUSIVELY on: "${competency}".
+
+DIFFICULTY LEVEL: ${difficulty}
+You must strictly adapt the complexity of the scenario based on this difficulty:
+- EASY: Clear scenario + obvious responsibility (e.g., a simple disagreement on a class presentation, managing time for midterms).
+- MEDIUM: Ambiguous situation + competing priorities (e.g., a hackathon deadline, a failing club event, integrating APIs in a group project with uncooperative peers).
+- HARD: Messy situation + incomplete information + stakeholder conflict (e.g., a catastrophic database failure during an internship, severe ethical dilemmas with a professor/manager, leading a hostile cross-functional team under extreme technical debt).
+- EXPERT: High-stakes chaos + unexpected interviewer follow-up probes (e.g., severe multi-team breakdown, unannounced architecture failure, hostile lead review). Generate 2 sharp, realistic follow-up questions an interviewer would ask after the candidate answers (e.g., "Why didn't you ask your manager for help?", "What would you do differently?").
 
 RANDOMIZATION SEED: ${seed}
-Use this seed to radically change the environment, the problem, and the characters involved. 
+(Ensure the environment is completely unique based on this seed).
+
+CRITICAL RULE: Generate 4 specific evaluation keywords (e.g., 'Initiative', 'Ownership', 'Decision-making', 'Impact') that an interviewer would look for in this specific scenario. Return them in the evaluatingMetrics array.
 
 CRITICAL RULE: NEVER use the same plot structure twice. Do NOT always use a hackathon, a capstone project, or a team member "ghosting." 
 
@@ -34,7 +43,7 @@ Depending on the random seed, force the setting to be one of the following radic
 3. An open-source contribution or online community project.
 4. A conflict with a professor or mentor regarding a technical choice.
 
-For "${competency}", ensure the core challenge is completely unique. For example, if Leadership & Ownership, do NOT just make someone step down. Instead, make the user have to pitch a new idea to a hostile group, or take charge of a project where everyone is doing the wrong task, or volunteer for something they have no experience in. 
+For "${competency}", ensure the core challenge is completely unique.
 
 Make it feel like a completely new story every single time.
 
@@ -42,12 +51,15 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
 {
   "scenarioContext": "string",
   "actualQuestion": "string",
+  "evaluatingMetrics": ["Initiative", "Ownership", "Decision-making", "Impact"],
+  "followUpQuestions": ["string (e.g. Why didn't you ask your manager for help?)", "string (e.g. What would you do differently?)"],
   "modelAnswer": {
     "S": "string (1-2 sentences setting the scene)",
     "T": "string (1-2 sentences defining the goal)",
     "A": "string (Detailed story of the specific actions taken)",
     "R": "string (The final positive outcome and metric)"
-  }
+  },
+  "whyItWorks": "string (A 1-2 sentence explanation of why this answer succeeds, focusing on the action phase or outcome)"
 }`;
 
     let lastErrorMsg = 'All model attempts failed.';
