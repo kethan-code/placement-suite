@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getScoreTheme } from '@/lib/scoreTheme';
 import VoiceVisualizer from '@/components/VoiceVisualizer';
+import ApiOnboarding from '@/components/ApiOnboarding';
+import { getGeminiApiKey, setGeminiApiKey, removeGeminiApiKey } from '@/lib/geminiKey';
 import { 
   Shield, 
   Users, 
@@ -24,7 +26,8 @@ import {
   Lightbulb,
   Brain,
   CheckCircle2,
-  User
+  User,
+  Key
 } from 'lucide-react';
 
 export interface ModelAnswer {
@@ -351,6 +354,8 @@ const COMPETENCIES = [
 
 export default function BehavioralCoachPage() {
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
   const [activeCompetency, setActiveCompetency] = useState('leadership');
   const [activeScenario, setActiveScenario] = useState<ScenarioItem | null>(null);
   const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard' | 'Expert'>('Medium');
@@ -406,6 +411,15 @@ export default function BehavioralCoachPage() {
   const analyserRef = useRef<AnalyserNode | null>(null);
 
   useEffect(() => {
+    setIsMounted(true);
+    const key = getGeminiApiKey();
+    if (key) setApiKey(key);
+
+    const syncKey = () => {
+      setApiKey(getGeminiApiKey());
+    };
+    window.addEventListener('gemini_api_key_updated', syncKey);
+
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const compParam = params.get('competency');
@@ -419,12 +433,20 @@ export default function BehavioralCoachPage() {
     }
 
     return () => {
+      window.removeEventListener('gemini_api_key_updated', syncKey);
       if (streamRef.current) streamRef.current.getTracks().forEach((track) => track.stop());
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close().catch(() => {});
       }
     };
   }, []);
+
+  const handleDisconnectKey = () => {
+    if (confirm("Disconnect your Gemini API key?")) {
+      removeGeminiApiKey();
+      setApiKey(null);
+    }
+  };
 
   // 120-Second STAR Timer Countdown
   useEffect(() => {
@@ -462,7 +484,7 @@ export default function BehavioralCoachPage() {
     setMicError(null);
 
     const fallbackItem = comp.pool[Math.floor(Math.random() * comp.pool.length)];
-    const key = apiKey || localStorage.getItem('app_gemini_api_key') || localStorage.getItem('app_api_key');
+    const key = apiKey || getGeminiApiKey();
     const randomSeed = Math.random();
 
     let fetchedScenario: ScenarioItem | null = null;
@@ -765,6 +787,15 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
       const data = await res.json();
       if (data.success) {
         setAnalysis(data.analysis);
+      } else {
+        const isAuthError = res.status === 401 || (data.error && data.error.toLowerCase().includes('api key'));
+        if (isAuthError) {
+          alert("Gemini API key is invalid or unavailable. Please update your API key.");
+          removeGeminiApiKey();
+          setApiKey(null);
+        } else {
+          alert("Evaluation Error: " + (data.error || 'Please check your connection and try again.'));
+        }
       }
 
       try {
@@ -774,7 +805,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
           body: JSON.stringify({
             transcript: targetTranscript,
             timings: estimatedTimings,
-            apiKey
+            apiKey: apiKey || getGeminiApiKey()
           })
         });
         const evalData = await evalRes.json();
@@ -796,7 +827,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
             });
           }
         } else {
-          setEvaluationWarnings(generateHeuristicWarnings(transcript, duration));
+          setEvaluationWarnings(generateHeuristicWarnings(targetTranscript, duration));
           setEvalCoverage({ S_score: 100, T_score: 80, A_score: 85, R_score: 35 });
           setScorecardData({
             overallScore: 82,
@@ -817,7 +848,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
           });
         }
       } catch (e) {
-        setEvaluationWarnings(generateHeuristicWarnings(transcript, duration));
+        setEvaluationWarnings(generateHeuristicWarnings(targetTranscript, duration));
         setEvalCoverage({ S_score: 100, T_score: 80, A_score: 85, R_score: 35 });
         setScorecardData({
           overallScore: 82,
@@ -848,13 +879,14 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
     if (!transcript.trim()) return;
     setIsImproving(true);
     try {
+      const activeKey = apiKey || getGeminiApiKey();
       const res = await fetch('/api/improve-answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           transcript,
           question: activeScenario?.actualQuestion || '',
-          apiKey
+          apiKey: activeKey
         })
       });
       const data = await res.json();
@@ -870,14 +902,44 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
     }
   };
 
+  if (!isMounted) {
+    return <div className="min-h-screen bg-[#0a0a0a]" />;
+  }
+
   if (!apiKey) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-6 text-center">
-        <h2 className="text-2xl font-bold mb-2">API Key Required</h2>
-        <p className="text-zinc-400 mb-6">Please connect your Gemini API key on the main page first.</p>
-        <a href="/" className="bg-white text-black font-bold py-3 px-6 rounded-xl hover:bg-zinc-200 transition-colors">
-          Go to Setup
-        </a>
+        {showSetupModal && (
+          <ApiOnboarding
+            isModal={true}
+            onClose={() => setShowSetupModal(false)}
+            onComplete={(_, key) => {
+              setShowSetupModal(false);
+              setApiKey(key);
+            }}
+          />
+        )}
+        <div className="max-w-md w-full bg-zinc-900/90 border border-zinc-800 rounded-3xl p-8 shadow-xl space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto text-3xl">
+            ⭐
+          </div>
+          <h2 className="text-2xl font-bold text-white">Gemini API Key Required</h2>
+          <p className="text-sm text-zinc-400">Please connect your Gemini API key once to unlock the STAR Behavioral Coach and other modules across the suite.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <button
+              onClick={() => setShowSetupModal(true)}
+              className="bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 px-6 rounded-xl transition-all shadow-md cursor-pointer text-sm"
+            >
+              Connect API Key
+            </button>
+            <a
+              href="/"
+              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold py-3 px-6 rounded-xl transition-all text-sm inline-flex items-center justify-center"
+            >
+              Back to Home
+            </a>
+          </div>
+        </div>
       </div>
     );
   }
@@ -890,13 +952,38 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 font-sans p-6 sm:p-10 relative overflow-hidden">
+      {/* API Setup Modal if user wants to change key */}
+      {showSetupModal && (
+        <ApiOnboarding
+          isModal={true}
+          onClose={() => setShowSetupModal(false)}
+          onComplete={(_, key) => {
+            setShowSetupModal(false);
+            setApiKey(key);
+          }}
+        />
+      )}
+
       <div className="max-w-5xl mx-auto space-y-8 relative z-10">
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-6 gap-4">
           <div>
             <h1 className="text-2xl font-extrabold text-white">STAR Method Behavioral Coach</h1>
             <p className="text-sm text-zinc-400 mt-1">Structure interview answers using Situation, Task, Action, and Result.</p>
           </div>
           <div className="flex items-center gap-3">
+            {/* Global API Key Status Badge */}
+            <div className="hidden sm:flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full text-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span className="text-zinc-300 font-medium">API Connected</span>
+              <button
+                onClick={() => setShowSetupModal(true)}
+                className="text-amber-400 hover:text-amber-300 underline font-semibold ml-1 cursor-pointer"
+                title="Update API key"
+              >
+                Edit
+              </button>
+            </div>
+
             <a
               href="/analytics"
               className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
@@ -916,7 +1003,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
               className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
             >
               <ArrowLeft className="w-3.5 h-3.5 text-zinc-400" />
-              <span>Back to JAM Suite</span>
+              <span>Suite Home</span>
             </a>
           </div>
         </div>

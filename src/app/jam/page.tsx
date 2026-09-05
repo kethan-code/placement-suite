@@ -4,6 +4,7 @@ import ApiOnboarding from '@/components/ApiOnboarding';
 import JamTopicSelector from '@/components/JamTopicSelector';
 import { getScoreTheme } from '@/lib/scoreTheme';
 import VoiceVisualizer from '@/components/VoiceVisualizer';
+import { getGeminiApiKey, setGeminiApiKey, removeGeminiApiKey } from '@/lib/geminiKey';
 
 interface ScoreRecord {
   id: string;
@@ -27,6 +28,7 @@ interface AnalysisResult {
 
 export default function JamSimulatorPage() {
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'practice' | 'analytics'>('practice');
   const [topic, setTopic] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -47,12 +49,20 @@ export default function JamSimulatorPage() {
   const analyserRef = useRef<AnalyserNode | null>(null);
 
   useEffect(() => {
-    const storedKey = localStorage.getItem('app_api_key');
+    setIsMounted(true);
+    const key = getGeminiApiKey();
+    if (key) setApiKey(key);
+
     const storedHistory = localStorage.getItem('app_score_history');
-    if (storedKey) setApiKey(storedKey);
     if (storedHistory) setHistory(JSON.parse(storedHistory));
 
+    const syncKey = () => {
+      setApiKey(getGeminiApiKey());
+    };
+    window.addEventListener('gemini_api_key_updated', syncKey);
+
     return () => {
+      window.removeEventListener('gemini_api_key_updated', syncKey);
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close().catch(() => {});
@@ -61,13 +71,15 @@ export default function JamSimulatorPage() {
   }, []);
 
   const handleKeySetup = (provider: 'gemini', key: string) => {
-    localStorage.setItem('app_api_key', key);
+    setGeminiApiKey(key);
     setApiKey(key);
   };
 
   const handleDisconnectKey = () => {
-    localStorage.removeItem('app_api_key');
-    setApiKey(null);
+    if (confirm("Disconnect your Gemini API key?")) {
+      removeGeminiApiKey();
+      setApiKey(null);
+    }
   };
 
   useEffect(() => {
@@ -222,10 +234,13 @@ export default function JamSimulatorPage() {
         setHistory(updatedHistory);
         localStorage.setItem('app_score_history', JSON.stringify(updatedHistory));
       } else {
-        alert("Evaluation failed: " + (data.error || 'Check your API key.'));
-        if (res.status === 401 || (data.error && data.error.toLowerCase().includes('api key'))) {
-          localStorage.removeItem('app_gemini_api_key');
-          setApiKey('');
+        const isAuthError = res.status === 401 || (data.error && data.error.toLowerCase().includes('api key'));
+        if (isAuthError) {
+          alert("Gemini API key is invalid or unavailable. Please connect a valid API key.");
+          removeGeminiApiKey();
+          setApiKey(null);
+        } else {
+          alert("Evaluation failed: " + (data.error || 'Please check your connection and try again.'));
         }
         setIsReviewing(true);
       }
@@ -236,6 +251,10 @@ export default function JamSimulatorPage() {
       setIsEvaluating(false);
     }
   };
+
+  if (!isMounted) {
+    return <div className="min-h-screen bg-slate-50" />;
+  }
 
   if (!apiKey) return <ApiOnboarding onComplete={handleKeySetup} />;
 

@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getScoreTheme } from '@/lib/scoreTheme';
 import VoiceVisualizer from '@/components/VoiceVisualizer';
+import ApiOnboarding from '@/components/ApiOnboarding';
+import { getGeminiApiKey, setGeminiApiKey, removeGeminiApiKey } from '@/lib/geminiKey';
 
 interface ChatMessage {
   id: string;
@@ -30,6 +32,8 @@ const SAMPLE_INITIAL_QUESTIONS: Record<string, string[]> = {
 
 export default function MockHRPage() {
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
   const [jobRole, setJobRole] = useState('GeneralCampusPlacement');
   const [persona, setPersona] = useState<'friendly' | 'balanced' | 'strict'>('balanced');
   const [isInterviewActive, setIsInterviewActive] = useState(false);
@@ -51,12 +55,21 @@ export default function MockHRPage() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    setApiKey(localStorage.getItem('app_gemini_api_key') || localStorage.getItem('app_api_key'));
+    setIsMounted(true);
+    const key = getGeminiApiKey();
+    if (key) setApiKey(key);
+
+    const syncKey = () => {
+      setApiKey(getGeminiApiKey());
+    };
+    window.addEventListener('gemini_api_key_updated', syncKey);
+
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       synthRef.current = window.speechSynthesis;
     }
 
     return () => {
+      window.removeEventListener('gemini_api_key_updated', syncKey);
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       }
@@ -252,6 +265,7 @@ export default function MockHRPage() {
     setIsLoadingNextTurn(true);
 
     try {
+      const activeKey = apiKey || getGeminiApiKey();
       const res = await fetch('/api/mock-hr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -260,7 +274,7 @@ export default function MockHRPage() {
           conversation: updatedHistory,
           candidateAnswer: finalAnswer,
           jobRole,
-          apiKey
+          apiKey: activeKey
         })
       });
 
@@ -285,7 +299,14 @@ export default function MockHRPage() {
           }
         });
       } else {
-        alert("Failed to generate follow-up question: " + (data.error || 'Gemini error'));
+        const isAuthError = res.status === 401 || (data.error && data.error.toLowerCase().includes('api key'));
+        if (isAuthError) {
+          alert("Gemini API key is invalid or unavailable. Please update your API key.");
+          removeGeminiApiKey();
+          setApiKey(null);
+        } else {
+          alert("Failed to generate follow-up question: " + (data.error || 'Gemini error'));
+        }
         setIsLoadingNextTurn(false);
       }
     } catch (e) {
@@ -306,6 +327,7 @@ export default function MockHRPage() {
 
     setIsEvaluating(true);
     try {
+      const activeKey = apiKey || getGeminiApiKey();
       const res = await fetch('/api/mock-hr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -313,7 +335,7 @@ export default function MockHRPage() {
           action: 'evaluate',
           conversation,
           jobRole,
-          apiKey
+          apiKey: activeKey
         })
       });
 
@@ -322,7 +344,14 @@ export default function MockHRPage() {
         setEvaluation(data.evaluation);
         setIsInterviewActive(false);
       } else {
-        alert("Evaluation error: " + (data.error || 'Check key.'));
+        const isAuthError = res.status === 401 || (data.error && data.error.toLowerCase().includes('api key'));
+        if (isAuthError) {
+          alert("Gemini API key is invalid or unavailable. Please update your API key.");
+          removeGeminiApiKey();
+          setApiKey(null);
+        } else {
+          alert("Evaluation error: " + (data.error || 'Please check your connection and try again.'));
+        }
       }
     } catch (e) {
       alert("Network error obtaining diagnostic score.");
@@ -331,18 +360,43 @@ export default function MockHRPage() {
     }
   };
 
+  if (!isMounted) {
+    return <div className="min-h-screen bg-slate-50" />;
+  }
+
   if (!apiKey) {
     return (
       <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6 text-center font-sans">
+        {showSetupModal && (
+          <ApiOnboarding
+            isModal={true}
+            onClose={() => setShowSetupModal(false)}
+            onComplete={(_, key) => {
+              setShowSetupModal(false);
+              setApiKey(key);
+            }}
+          />
+        )}
         <div className="max-w-md w-full bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm space-y-4">
           <div className="w-14 h-14 rounded-2xl bg-purple-50 border border-purple-200 text-purple-600 flex items-center justify-center mx-auto text-2xl">
             🔑
           </div>
-          <h2 className="text-2xl font-bold text-slate-900">API Key Required</h2>
-          <p className="text-sm text-slate-500">Please connect your Gemini API key on the main page first.</p>
-          <a href="/" className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-sm shadow-purple-500/20 text-sm">
-            Go to Setup
-          </a>
+          <h2 className="text-2xl font-bold text-slate-900">Gemini API Key Required</h2>
+          <p className="text-sm text-slate-500">Please connect your Gemini API key once to unlock the Two-Way Mock HR Interview and other modules.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <button
+              onClick={() => setShowSetupModal(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-sm shadow-purple-500/20 text-sm cursor-pointer"
+            >
+              Connect API Key
+            </button>
+            <a
+              href="/"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 px-6 rounded-xl transition-colors text-sm inline-flex items-center justify-center"
+            >
+              Back to Home
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -350,6 +404,18 @@ export default function MockHRPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-900 font-sans p-6 sm:p-10 relative overflow-hidden flex flex-col justify-between">
+      {/* API Setup Modal if user wants to change key */}
+      {showSetupModal && (
+        <ApiOnboarding
+          isModal={true}
+          onClose={() => setShowSetupModal(false)}
+          onComplete={(_, key) => {
+            setShowSetupModal(false);
+            setApiKey(key);
+          }}
+        />
+      )}
+
       <div className="max-w-4xl w-full mx-auto space-y-8 relative z-10 flex-1">
 
         {/* Top Navbar */}
@@ -369,6 +435,19 @@ export default function MockHRPage() {
             </div>
           </div>
           <div className="flex items-center gap-2.5 shrink-0">
+            {/* Global API Key Status Badge */}
+            <div className="hidden sm:flex items-center gap-2 bg-purple-50 border border-purple-200/80 px-3 py-1.5 rounded-full text-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span className="text-purple-900 font-medium">API Connected</span>
+              <button
+                onClick={() => setShowSetupModal(true)}
+                className="text-purple-700 hover:text-purple-950 underline font-semibold ml-1 cursor-pointer"
+                title="Update API key"
+              >
+                Edit
+              </button>
+            </div>
+
             <a
               href="/"
               className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 hover:text-slate-900 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5"

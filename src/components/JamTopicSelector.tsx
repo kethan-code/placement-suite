@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { getGeminiApiKey } from '@/lib/geminiKey';
 
 // Universal Topics for ALL Branches
 export const MASTER_DECK = [
@@ -130,7 +131,7 @@ export default function JamTopicSelector({ onTopicSelect, apiKey }: JamTopicSele
 
   const handleGenerateAiTopic = async () => {
     setIsGeneratingAi(true);
-    const key = apiKey || localStorage.getItem('app_gemini_api_key') || localStorage.getItem('app_api_key');
+    const key = apiKey || getGeminiApiKey();
 
     const prompt = `You are a placement training coordinator specializing in standard 60-second Just-A-Minute (JAM) rounds for engineering college placement drives.
 

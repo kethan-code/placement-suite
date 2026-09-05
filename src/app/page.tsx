@@ -1,15 +1,50 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getGeminiApiKey, removeGeminiApiKey, hasGeminiApiKey } from '@/lib/geminiKey';
+import ApiOnboarding from '@/components/ApiOnboarding';
 
 export default function WelcomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    const checkKey = () => {
+      setIsConfigured(hasGeminiApiKey());
+    };
+    checkKey();
+
+    window.addEventListener('gemini_api_key_updated', checkKey);
+    return () => window.removeEventListener('gemini_api_key_updated', checkKey);
+  }, []);
+
+  const handleDisconnect = () => {
+    if (confirm('Disconnect your Gemini API key? You will need to enter it again to use AI features.')) {
+      removeGeminiApiKey();
+      setIsConfigured(false);
+    }
+  };
 
   return (
     <div className="bg-white min-h-screen text-zinc-900 font-sans flex flex-col justify-between relative overflow-x-hidden select-none">
+      {/* Setup Modal */}
+      {showSetupModal && (
+        <ApiOnboarding
+          isModal={true}
+          onClose={() => setShowSetupModal(false)}
+          onComplete={() => {
+            setShowSetupModal(false);
+            setIsConfigured(true);
+          }}
+        />
+      )}
+
       {/* Top Navbar */}
-      <header className="w-full bg-white border-b border-zinc-200/60 sticky top-0 z-50 h-[80px] lg:h-[96px] flex items-center shrink-0">
+      <header className="w-full bg-white border-b border-zinc-200/60 sticky top-0 z-40 h-[80px] lg:h-[96px] flex items-center shrink-0">
         <div className="max-w-[1340px] w-full mx-auto px-6 sm:px-10 h-full flex items-center justify-between">
           {/* Left: Brand Logo */}
           <Link href="/" className="w-[230px] sm:w-[250px] flex items-center gap-3 group focus:outline-none shrink-0">
@@ -26,38 +61,71 @@ export default function WelcomePage() {
             </div>
           </Link>
 
-          {/* Right: Navigation Links & Sign In */}
-          <div className="hidden md:flex items-center gap-[40px] lg:gap-[50px]">
-            <nav className="flex items-center gap-[35px] lg:gap-[45px] text-[17px] lg:text-[19px] font-medium text-zinc-900">
+          {/* Right: Navigation Links & API Connection Status */}
+          <div className="hidden md:flex items-center gap-[30px] lg:gap-[40px]">
+            <nav className="flex items-center gap-[30px] lg:gap-[40px] text-[16px] lg:text-[18px] font-medium text-zinc-900">
               <a href="#about" className="hover:text-black transition-colors">About Us</a>
               <a href="#features" className="hover:text-black transition-colors">Features</a>
               <a href="#how-it-works" className="hover:text-black transition-colors">How It Works</a>
             </nav>
 
-            <a
-              href="#signin"
-              className="w-[120px] lg:w-[128px] h-[46px] lg:h-[50px] inline-flex items-center justify-center text-[17px] lg:text-[19px] font-medium text-zinc-950 border-[2px] border-zinc-950 rounded-full hover:bg-zinc-100 transition-colors focus:outline-none shrink-0"
-            >
-              Sign In
-            </a>
+            {/* Global API Connection Status */}
+            {isMounted && (
+              isConfigured ? (
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200/80 px-4 py-2 rounded-full shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="text-xs lg:text-sm font-semibold text-emerald-800">
+                    ✓ Gemini Connected
+                  </span>
+                  <button
+                    onClick={() => setShowSetupModal(true)}
+                    className="text-xs text-emerald-700 hover:text-emerald-950 underline ml-1 cursor-pointer font-medium"
+                    title="Change or update your Gemini API key"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={handleDisconnect}
+                    className="text-xs text-rose-600 hover:text-rose-800 ml-1 cursor-pointer font-medium"
+                    title="Disconnect key"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSetupModal(true)}
+                  className="h-[44px] lg:h-[48px] px-6 inline-flex items-center justify-center text-[15px] lg:text-[17px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all duration-200 shadow-sm shadow-blue-500/20 cursor-pointer"
+                >
+                  Connect API Key
+                </button>
+              )
+            )}
           </div>
 
           {/* Mobile menu toggle */}
-          <button 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden flex items-center p-2 text-zinc-800 hover:text-black focus:outline-none"
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? (
-              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+          <div className="md:hidden flex items-center gap-2">
+            {isMounted && isConfigured && (
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                ✓ Connected
+              </span>
             )}
-          </button>
+            <button 
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 text-zinc-800 hover:text-black focus:outline-none"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Dropdown Menu */}
@@ -84,13 +152,30 @@ export default function WelcomePage() {
             >
               How It Works
             </a>
-            <a 
-              href="#signin" 
-              onClick={() => setMobileMenuOpen(false)} 
-              className="mt-2 h-[48px] inline-flex items-center justify-center text-lg font-medium text-zinc-950 border-[2px] border-zinc-950 rounded-full hover:bg-zinc-100 transition-colors text-center"
-            >
-              Sign In
-            </a>
+            {isConfigured ? (
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm font-semibold text-emerald-800">✓ Gemini API Connected</span>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setShowSetupModal(true);
+                  }}
+                  className="text-sm font-bold text-blue-600 underline"
+                >
+                  Edit Key
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setShowSetupModal(true);
+                }}
+                className="mt-2 h-[48px] inline-flex items-center justify-center text-lg font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors text-center"
+              >
+                Connect Gemini API Key
+              </button>
+            )}
           </div>
         )}
       </header>
@@ -193,7 +278,7 @@ export default function WelcomePage() {
 
                 {/* Feature Name (32-36px) */}
                 <h2 className="text-[28px] sm:text-[32px] lg:text-[34px] font-bold text-black tracking-tight leading-[1.1] mt-[18px] sm:mt-[22px] mb-[6px] sm:mb-[8px]">
-                  Mock HR
+                  AI Mock Interview
                 </h2>
                 {/* Short Description (20-22px) */}
                 <p className="text-zinc-700 text-[17px] sm:text-[19px] lg:text-[21px] leading-[1.35] font-normal max-w-[270px] mx-auto">
