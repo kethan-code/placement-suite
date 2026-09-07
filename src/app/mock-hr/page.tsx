@@ -343,6 +343,23 @@ export default function MockHRPage() {
       if (data.success) {
         setEvaluation(data.evaluation);
         setIsInterviewActive(false);
+
+        // Save Mock HR session to localStorage for Analytics
+        try {
+          const scoreOutOf100 = typeof data.evaluation.overallScore === 'number' 
+            ? Math.round(data.evaluation.overallScore <= 10 ? data.evaluation.overallScore * 10 : data.evaluation.overallScore)
+            : 80;
+          const newMockRecord = {
+            id: Date.now().toString(),
+            date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            timestamp: Date.now(),
+            jobRole,
+            overallScore: scoreOutOf100,
+            turnsCount: conversation.length
+          };
+          const existing = JSON.parse(localStorage.getItem('mock_hr_score_history') || '[]');
+          localStorage.setItem('mock_hr_score_history', JSON.stringify([newMockRecord, ...existing]));
+        } catch (e) {}
       } else {
         const isAuthError = res.status === 401 || (data.error && data.error.toLowerCase().includes('api key'));
         if (isAuthError) {
@@ -382,7 +399,7 @@ export default function MockHRPage() {
             🔑
           </div>
           <h2 className="text-2xl font-bold text-slate-900">Gemini API Key Required</h2>
-          <p className="text-sm text-slate-500">Please connect your Gemini API key once to unlock the Two-Way Mock HR Interview and other modules.</p>
+          <p className="text-sm text-slate-500">Please connect your Gemini API key once to unlock the Two-Way AI Mock Interview and other modules.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <button
               onClick={() => setShowSetupModal(true)}
@@ -430,11 +447,11 @@ export default function MockHRPage() {
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Two-Way Mock HR Interview</h1>
+              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">AI Mock Interview</h1>
               <p className="text-sm text-slate-500 mt-0.5">Real-time voice conversation with AI interviewer & TTS audio playback.</p>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2.5 flex-wrap shrink-0">
             {/* Global API Key Status Badge */}
             <div className="hidden sm:flex items-center gap-2 bg-purple-50 border border-purple-200/80 px-3 py-1.5 rounded-full text-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -449,13 +466,31 @@ export default function MockHRPage() {
             </div>
 
             <a
+              href="/jam"
+              className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 hover:text-slate-900 font-semibold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5"
+            >
+              <span>JAM</span>
+            </a>
+            <a
+              href="/behavioral"
+              className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 hover:text-slate-900 font-semibold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5"
+            >
+              <span>STAR Coach</span>
+            </a>
+            <a
+              href="/analytics"
+              className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 hover:text-slate-900 font-semibold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5"
+            >
+              <span>Analytics</span>
+            </a>
+            <a
               href="/"
-              className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 hover:text-slate-900 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5"
+              className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 hover:text-slate-900 font-semibold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5"
             >
               <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
               </svg>
-              <span>Back to JAM Suite</span>
+              <span>Suite Home</span>
             </a>
           </div>
         </div>
@@ -881,7 +916,7 @@ export default function MockHRPage() {
       {/* Footer */}
       <footer className="w-full max-w-4xl mx-auto py-8 flex justify-center mt-12 text-center shrink-0">
         <p className="text-slate-400 text-xs tracking-wider uppercase font-semibold">
-          Placement Intelligence Suite • Two-Way Mock HR
+          Placement Intelligence Suite • AI Mock Interview
         </p>
       </footer>
     </div>

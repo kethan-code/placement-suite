@@ -21,13 +21,15 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Info,
   BarChart3,
   Lightbulb,
   Brain,
   CheckCircle2,
   User,
-  Key
+  Key,
+  Star
 } from 'lucide-react';
 
 export interface ModelAnswer {
@@ -58,65 +60,65 @@ export function ModelAnswerDrawer({
   if (!answerData) return null;
 
   return (
-    <div className="mt-6 border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950/50">
+    <div className="mt-6 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 bg-zinc-900 hover:bg-zinc-800 transition-colors"
+        className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer"
       >
-        <span className="text-sm font-semibold text-zinc-200">
+        <span className="text-sm font-semibold text-slate-800">
           📖 Read Example Model Story
         </span>
         {isOpen ? (
-          <ChevronUp className="w-4 h-4 text-zinc-500" />
+          <ChevronUp className="w-4 h-4 text-slate-500" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-zinc-500" />
+          <ChevronDown className="w-4 h-4 text-slate-500" />
         )}
       </button>
 
       {isOpen && (
-        <div className="p-5 border-t border-zinc-800 space-y-6">
-          <h3 className="font-bold text-white text-lg">Example strong answer</h3>
+        <div className="p-5 border-t border-slate-200 space-y-6 bg-white">
+          <h3 className="font-bold text-slate-900 text-lg">Example strong answer</h3>
 
           <div className="space-y-4">
             {/* Situation */}
             <div>
-              <h4 className="text-sm font-semibold text-zinc-300 mb-1">
-                S — Situation <span className="text-zinc-500 font-normal">· ~12 sec</span>
+              <h4 className="text-sm font-semibold text-slate-700 mb-1">
+                S — Situation <span className="text-slate-400 font-normal">· ~12 sec</span>
               </h4>
-              <p className="text-sm text-zinc-400 font-light leading-relaxed">{answerData.S}</p>
+              <p className="text-sm text-slate-600 font-normal leading-relaxed">{answerData.S}</p>
             </div>
 
             {/* Task */}
             <div>
-              <h4 className="text-sm font-semibold text-zinc-300 mb-1">
-                T — Task <span className="text-zinc-500 font-normal">· ~18 sec</span>
+              <h4 className="text-sm font-semibold text-slate-700 mb-1">
+                T — Task <span className="text-slate-400 font-normal">· ~18 sec</span>
               </h4>
-              <p className="text-sm text-zinc-400 font-light leading-relaxed">{answerData.T}</p>
+              <p className="text-sm text-slate-600 font-normal leading-relaxed">{answerData.T}</p>
             </div>
 
             {/* Action - Highlighted to reinforce the 55% rule */}
-            <div className="p-3 bg-emerald-950/20 border border-emerald-900/50 rounded-md -mx-3">
-              <h4 className="text-sm font-semibold text-emerald-400 mb-1">
-                A — Action <span className="text-emerald-500/50 font-normal">· ~65 sec</span>
+            <div className="p-3.5 bg-amber-50/70 border border-amber-300 rounded-xl -mx-2">
+              <h4 className="text-sm font-bold text-amber-900 mb-1">
+                A — Action <span className="text-amber-700 font-normal">· ~65 sec</span>
               </h4>
-              <p className="text-sm text-emerald-100/70 font-medium leading-relaxed">{answerData.A}</p>
+              <p className="text-sm text-slate-800 font-medium leading-relaxed">{answerData.A}</p>
             </div>
 
             {/* Result */}
             <div>
-              <h4 className="text-sm font-semibold text-zinc-300 mb-1">
-                R — Result <span className="text-zinc-500 font-normal">· ~25 sec</span>
+              <h4 className="text-sm font-semibold text-slate-700 mb-1">
+                R — Result <span className="text-slate-400 font-normal">· ~25 sec</span>
               </h4>
-              <p className="text-sm text-zinc-400 font-light leading-relaxed">{answerData.R}</p>
+              <p className="text-sm text-slate-600 font-normal leading-relaxed">{answerData.R}</p>
             </div>
           </div>
 
           {/* Why this works insight */}
-          <div className="mt-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
-            <div className="flex items-center gap-2 text-yellow-500 font-semibold text-sm mb-2">
-              <Lightbulb className="w-4 h-4 text-yellow-500" /> Why this works
+          <div className="mt-6 p-4 bg-amber-50/60 border border-amber-200 rounded-xl">
+            <div className="flex items-center gap-2 text-amber-800 font-bold text-sm mb-1.5">
+              <Lightbulb className="w-4 h-4 text-[#f97316]" /> Why this works
             </div>
-            <p className="text-sm text-zinc-300 font-light leading-relaxed">
+            <p className="text-sm text-slate-700 font-normal leading-relaxed">
               {whyItWorks || "The candidate spends most of the answer explaining their own decisions and actions. That teaches the STAR methodology naturally."}
             </p>
           </div>
@@ -360,6 +362,8 @@ export default function BehavioralCoachPage() {
   const [activeScenario, setActiveScenario] = useState<ScenarioItem | null>(null);
   const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard' | 'Expert'>('Medium');
   const [showExample, setShowExample] = useState(false);
+  const [showScenarioContext, setShowScenarioContext] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [timeLeft, setTimeLeft] = useState(120); // 2-Minute STAR timer
   const [transcript, setTranscript] = useState('');
@@ -430,6 +434,8 @@ export default function BehavioralCoachPage() {
       if (diffParam && ['Easy', 'Medium', 'Hard', 'Expert'].includes(diffParam)) {
         setDifficulty(diffParam as 'Easy' | 'Medium' | 'Hard' | 'Expert');
       }
+      const initialComp = (compParam && COMPETENCIES.find(c => c.id === compParam)) || COMPETENCIES[0];
+      setActiveScenario(initialComp.pool[0]);
     }
 
     return () => {
@@ -462,6 +468,8 @@ export default function BehavioralCoachPage() {
   const generateQuestion = async (competencyId?: string) => {
     setIsGeneratingQ(true);
     setShowExample(false);
+    setShowScenarioContext(false);
+    setShowHelp(false);
     const targetCompId = competencyId || activeCompetency;
     const comp = COMPETENCIES.find((c) => c.id === targetCompId) || COMPETENCIES[0];
     
@@ -868,6 +876,21 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
           }
         });
       }
+
+      // Save STAR session to localStorage for Analytics
+      try {
+        const starScore = 82; // or evalData.overallScore
+        const newStarRecord = {
+          id: Date.now().toString(),
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          timestamp: Date.now(),
+          competency: activeCompetency,
+          overallScore: starScore,
+          durationSeconds: duration
+        };
+        const existing = JSON.parse(localStorage.getItem('star_score_history') || '[]');
+        localStorage.setItem('star_score_history', JSON.stringify([newStarRecord, ...existing]));
+      } catch (e) {}
     } catch (e) {
       alert("Network error communicating with AI server.");
     } finally {
@@ -903,12 +926,12 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
   };
 
   if (!isMounted) {
-    return <div className="min-h-screen bg-[#0a0a0a]" />;
+    return <div className="min-h-screen bg-white" />;
   }
 
   if (!apiKey) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-white text-slate-900 flex flex-col items-center justify-center p-6 text-center">
         {showSetupModal && (
           <ApiOnboarding
             isModal={true}
@@ -919,22 +942,22 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
             }}
           />
         )}
-        <div className="max-w-md w-full bg-zinc-900/90 border border-zinc-800 rounded-3xl p-8 shadow-xl space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto text-3xl">
+        <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-[#f97316] flex items-center justify-center mx-auto text-3xl">
             ⭐
           </div>
-          <h2 className="text-2xl font-bold text-white">Gemini API Key Required</h2>
-          <p className="text-sm text-zinc-400">Please connect your Gemini API key once to unlock the STAR Behavioral Coach and other modules across the suite.</p>
+          <h2 className="text-2xl font-bold text-slate-900">Gemini API Key Required</h2>
+          <p className="text-sm text-slate-600">Please connect your Gemini API key once to unlock the STAR Behavioral Coach and other modules across the suite.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <button
               onClick={() => setShowSetupModal(true)}
-              className="bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 px-6 rounded-xl transition-all shadow-md cursor-pointer text-sm"
+              className="bg-[#f97316] hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-sm cursor-pointer text-sm"
             >
               Connect API Key
             </button>
             <a
               href="/"
-              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold py-3 px-6 rounded-xl transition-all text-sm inline-flex items-center justify-center"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 px-6 rounded-xl transition-all text-sm inline-flex items-center justify-center border border-slate-200"
             >
               Back to Home
             </a>
@@ -951,7 +974,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
   else currentStepIndex = 3;                     // Result (24-0s -> 96-120s elapsed)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 font-sans p-6 sm:p-10 relative overflow-hidden">
+    <div className="min-h-screen bg-white text-slate-900 font-sans p-6 sm:p-10 relative overflow-hidden">
       {/* API Setup Modal if user wants to change key */}
       {showSetupModal && (
         <ApiOnboarding
@@ -965,19 +988,30 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
       )}
 
       <div className="max-w-5xl mx-auto space-y-8 relative z-10">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-6 gap-4">
-          <div>
-            <h1 className="text-2xl font-extrabold text-white">STAR Method Behavioral Coach</h1>
-            <p className="text-sm text-zinc-400 mt-1">Structure interview answers using Situation, Task, Action, and Result.</p>
+        {/* TOP HEADER */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-6 gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-[#fbbf24] to-[#f97316] text-white flex items-center justify-center shadow-sm shadow-amber-500/20 shrink-0">
+              <Star className="w-5 h-5 fill-white text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                STAR Method Behavioral Coach
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-normal">
+                Structure interview answers using Situation, Task, Action, and Result.
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2.5 flex-wrap">
             {/* Global API Key Status Badge */}
-            <div className="hidden sm:flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span className="text-zinc-300 font-medium">API Connected</span>
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full text-xs shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-slate-700 font-medium">API Connected</span>
               <button
                 onClick={() => setShowSetupModal(true)}
-                className="text-amber-400 hover:text-amber-300 underline font-semibold ml-1 cursor-pointer"
+                className="text-[#f97316] hover:text-orange-600 font-semibold ml-0.5 cursor-pointer underline"
                 title="Update API key"
               >
                 Edit
@@ -985,238 +1019,212 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
             </div>
 
             <a
-              href="/analytics"
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
+              href="/jam"
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-xs"
             >
-              <BarChart3 className="w-3.5 h-3.5 text-zinc-400" />
-              <span>Analytics</span>
+              <Mic className="w-3.5 h-3.5 text-blue-600" />
+              <span>JAM Simulator</span>
             </a>
             <a
               href="/mock-hr"
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-xs"
             >
-              <Mic className="w-3.5 h-3.5 text-zinc-400" />
-              <span>Mock HR</span>
+              <Users className="w-3.5 h-3.5 text-purple-600" />
+              <span>AI Mock Interview</span>
+            </a>
+            <a
+              href="/analytics"
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-xs"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-slate-500" />
+              <span>Analytics</span>
             </a>
             <a
               href="/"
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-xs"
             >
-              <ArrowLeft className="w-3.5 h-3.5 text-zinc-400" />
+              <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
               <span>Suite Home</span>
             </a>
           </div>
         </div>
 
         {micError && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-2xl text-sm font-medium flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-sm font-medium flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
             <span>{micError}</span>
           </div>
         )}
 
+        {/* 1. TARGET BEHAVIORAL COMPETENCY (GRID FORMAT INSPIRED BY REFERENCE UI) */}
         <div className="space-y-3">
-          <label className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest block">
-            Target Behavioral Competency
-          </label>
-          <div className="flex flex-wrap gap-2.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+              1. Target Behavioral Competency
+            </label>
+            <span className="text-xs font-mono text-slate-500">5 High-Impact Domains</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {COMPETENCIES.map((comp) => {
               const Icon = comp.icon;
-              const isActive = activeCompetency === comp.id;
+              const isSelected = activeCompetency === comp.id;
+              const descriptions: Record<string, string> = {
+                leadership: 'Stepping up, taking ownership, and driving accountability.',
+                conflict: 'Navigating disagreements with data and active listening.',
+                crisis: 'Triage and composure under high stakes and crash events.',
+                failure: 'Post-mortem resilience and retaining core engineering lessons.',
+                learning: 'Rapid tech stack adoption under tight time bounds.'
+              };
               return (
-                <button
+                <div
                   key={comp.id}
                   onClick={() => handleSelectCompetency(comp.id)}
-                  className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all border flex items-center gap-2 ${
-                    isActive
-                      ? 'bg-white text-black border-transparent shadow-sm'
-                      : 'bg-zinc-900/80 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-zinc-200'
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-1.5 ${
+                    isSelected
+                      ? 'bg-amber-50/80 text-amber-900 border-[#f97316] shadow-sm ring-1 ring-[#f97316]/30'
+                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 shadow-xs'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-black' : 'text-zinc-400'}`} />
-                  <span>{comp.label}</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-amber-100 text-[#f97316]' : 'bg-slate-100 text-slate-600'}`}>
+                      <Icon className="w-4 h-4 shrink-0" />
+                    </div>
+                    <h4 className={`text-xs font-bold tracking-wide ${isSelected ? 'text-slate-900 font-extrabold' : 'text-slate-800'}`}>
+                      {comp.label}
+                    </h4>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed pl-8">
+                    {descriptions[comp.id] || 'Behavioral mastery scenario.'}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 2. DIFFICULTY LEVEL (CLEAN 4-SEGMENT SELECTOR) */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+              2. Difficulty Level
+            </label>
+            <span className="text-[11px] font-mono text-slate-500">
+              {difficulty === 'Easy' && 'Clear scenario + obvious responsibility'}
+              {difficulty === 'Medium' && 'Ambiguous situation + competing priorities'}
+              {difficulty === 'Hard' && 'Messy situation + stakeholder conflict'}
+              {difficulty === 'Expert' && '🔥 High-stakes chaos + unexpected follow-up probes'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {([
+              { level: 'Easy', label: 'Easy', badge: '100% Clear' },
+              { level: 'Medium', label: 'Medium', badge: 'Trade-offs' },
+              { level: 'Hard', label: 'Hard', badge: 'Conflict' },
+              { level: 'Expert', label: '🔥 Expert', badge: 'High-Stakes' }
+            ] as const).map(({ level, label, badge }) => {
+              const isActive = difficulty === level;
+              return (
+                <button
+                  key={level}
+                  onClick={() => setDifficulty(level as any)}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                    isActive
+                      ? 'bg-amber-50/80 border-[#f97316] text-slate-900 ring-1 ring-[#f97316]/30 shadow-xs'
+                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 shadow-xs'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold">{label}</span>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isActive ? 'bg-amber-100 text-[#f97316] font-bold' : 'bg-slate-100 text-slate-500'}`}>
+                      {badge}
+                    </span>
+                  </div>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Difficulty Level Selector */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest block">
-              Difficulty Level
-            </label>
-            <span className="text-[11px] font-mono text-zinc-400">
-              {difficulty === 'Easy' && 'Clear scenario + obvious responsibility'}
-              {difficulty === 'Medium' && 'Ambiguous situation + competing priorities'}
-              {difficulty === 'Hard' && 'Messy situation + incomplete info + stakeholder conflict'}
-              {difficulty === 'Expert' && '🔥 High-stakes chaos + unexpected follow-up probes'}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap gap-2.5">
-            {([
-              { level: 'Easy', label: 'Easy', desc: 'Clear scenario + obvious responsibility' },
-              { level: 'Medium', label: 'Medium', desc: 'Ambiguous situation + competing priorities' },
-              { level: 'Hard', label: 'Hard', desc: 'Messy situation + incomplete info + stakeholder conflict' },
-              { level: 'Expert', label: '🔥 Expert', desc: 'High-stakes chaos + unexpected follow-up probes' }
-            ] as const).map(({ level, label, desc }) => {
-              const isActive = difficulty === level;
-              return (
-                <div key={level} className="relative group">
-                  <button
-                    onClick={() => setDifficulty(level as any)}
-                    className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
-                      isActive
-                        ? level === 'Expert'
-                          ? 'bg-red-600 text-white border-transparent shadow-lg font-black'
-                          : 'bg-white text-black border-transparent shadow-sm'
-                        : 'bg-zinc-900/80 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-zinc-200'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block w-52 p-2.5 bg-zinc-800 text-[11px] text-zinc-200 rounded-xl shadow-2xl border border-zinc-700 z-50 text-center pointer-events-none">
-                    {desc}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 10/15/55/20 ACTION ROADMAP */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <label className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest block">
-                2-Minute STAR Time Allocation Roadmap
-              </label>
-              <div className="group relative inline-flex items-center ml-2 cursor-help">
-                <Info className="w-4 h-4 text-zinc-500 hover:text-zinc-300 transition-colors" />
-                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block w-64 p-3 bg-zinc-800 text-xs text-zinc-300 rounded-md shadow-xl border border-zinc-700 z-50">
-                  Most candidates fail by overweighting the Situation and Task. Interviewers care most about the Action phase, which is why it must dominate your time allocation.
+        {/* 3. STAR TIME ALLOCATION / ROADMAP */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                <span className="text-[#f97316]">⭐</span> STAR Time Allocation Roadmap
+              </span>
+              <div className="group relative inline-flex items-center cursor-help">
+                <Info className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 transition-colors" />
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block w-64 p-2.5 bg-slate-900 text-[11px] text-slate-100 rounded-lg shadow-xl border border-slate-800 z-50">
+                  Interviewers prioritize your specific actions. Dedicate ~55% of your time to the Action phase.
                 </div>
               </div>
             </div>
-            <span className="text-[11px] font-mono text-zinc-500">Key Focus: 55% Action</span>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-mono font-bold bg-amber-50 text-[#f97316] border border-amber-200 px-2.5 py-0.5 rounded-full">
+                55% Action Focus
+              </span>
+              <span className="text-[11px] font-mono text-slate-500">Total: 120s</span>
+            </div>
           </div>
 
-          <div className="relative">
-            <div className="absolute top-1/2 left-0 w-full h-[1px] bg-zinc-800 -z-10" />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 relative z-10">
-              {/* Situation Row */}
-              <div className={`rounded-2xl p-4 space-y-2 flex flex-col justify-between transition-all ${
-                isRecording && currentStepIndex === 0
-                  ? 'bg-blue-950/40 border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)] animate-pulse'
-                  : 'bg-zinc-900/80 border border-zinc-800/80'
-              }`}>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-black text-white bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">S</span>
-                      <span className="font-bold text-zinc-200">Situation</span>
-                    </div>
-                    <span className="font-extrabold text-zinc-400 font-mono">10% (~12s)</span>
-                  </div>
-                  <div className="w-full bg-zinc-950 rounded-full h-1.5 overflow-hidden border border-zinc-800">
-                    <div className="bg-zinc-400 h-full rounded-full" style={{ width: '10%' }}></div>
-                  </div>
-                </div>
-                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  Brief context — where, when, what was the setting? (1–2 sentences)
-                </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {/* S */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">S — Situation</span>
+                <span className="text-[10px] font-mono text-slate-500">10% (~12s)</span>
               </div>
+              <p className="text-[11px] text-slate-500 leading-tight">Setting &amp; context</p>
+            </div>
 
-              {/* Task Row */}
-              <div className={`rounded-2xl p-4 space-y-2 flex flex-col justify-between transition-all ${
-                isRecording && currentStepIndex === 1
-                  ? 'bg-purple-950/40 border-2 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.3)] animate-pulse'
-                  : 'bg-zinc-900/80 border border-zinc-800/80'
-              }`}>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-black text-white bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">T</span>
-                      <span className="font-bold text-zinc-200">Task</span>
-                    </div>
-                    <span className="font-extrabold text-zinc-400 font-mono">15% (~18s)</span>
-                  </div>
-                  <div className="w-full bg-zinc-950 rounded-full h-1.5 overflow-hidden border border-zinc-800">
-                    <div className="bg-zinc-400 h-full rounded-full" style={{ width: '15%' }}></div>
-                  </div>
-                </div>
-                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  What was your explicit responsibility or goal?
-                </p>
+            {/* T */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">T — Task</span>
+                <span className="text-[10px] font-mono text-slate-500">15% (~18s)</span>
               </div>
+              <p className="text-[11px] text-slate-500 leading-tight">Your responsibility</p>
+            </div>
 
-              {/* Action Row - ELEVATED 55% FOCUS */}
-              <div className={`rounded-2xl p-4 space-y-2 flex flex-col justify-between transition-all ${
-                isRecording && currentStepIndex === 2
-                  ? 'bg-emerald-950/50 border-2 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)] animate-pulse'
-                  : 'bg-emerald-950/30 border border-emerald-500/50 ring-1 ring-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
-              }`}>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-black text-black bg-emerald-400 px-2 py-0.5 rounded">A</span>
-                      <span className="font-extrabold text-emerald-400">Action</span>
-                    </div>
-                    <span className="font-black text-emerald-400 text-lg font-mono">55% (~66s)</span>
-                  </div>
-                  <div className="w-full bg-zinc-950 rounded-full h-1.5 overflow-hidden border border-emerald-900/50">
-                    <div className="bg-emerald-400 h-full rounded-full" style={{ width: '55%' }}></div>
-                  </div>
-                </div>
-                <p className="text-[11px] text-zinc-200 font-medium leading-relaxed">
-                  What did <strong className="text-emerald-300 font-bold">YOU</strong> specifically do? (3–5 concrete steps you personally took)
-                </p>
+            {/* A - Highlighted in Orange STAR Theme */}
+            <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-300 space-y-1 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-900 flex items-center gap-1">
+                  <span>⭐</span> A — Action
+                </span>
+                <span className="text-[10px] font-mono text-[#f97316] font-bold">55% (~66s)</span>
               </div>
+              <p className="text-[11px] text-amber-800 font-medium leading-tight">3–5 personal steps</p>
+            </div>
 
-              {/* Result Row */}
-              <div className={`rounded-2xl p-4 space-y-2 flex flex-col justify-between transition-all ${
-                isRecording && currentStepIndex === 3
-                  ? 'bg-amber-950/40 border-2 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse'
-                  : 'bg-zinc-900/80 border border-zinc-800/80'
-              }`}>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-black text-white bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">R</span>
-                      <span className="font-bold text-zinc-200">Result</span>
-                    </div>
-                    <span className="font-extrabold text-zinc-400 font-mono">20% (~24s)</span>
-                  </div>
-                  <div className="w-full bg-zinc-950 rounded-full h-1.5 overflow-hidden border border-zinc-800">
-                    <div className="bg-zinc-400 h-full rounded-full" style={{ width: '20%' }}></div>
-                  </div>
-                </div>
-                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  What happened? Quantify wherever possible. What did you learn?
-                </p>
+            {/* R */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">R — Result</span>
+                <span className="text-[10px] font-mono text-slate-500">20% (~24s)</span>
               </div>
+              <p className="text-[11px] text-slate-500 leading-tight">Metrics &amp; lessons</p>
             </div>
           </div>
         </div>
 
+        {/* 4. MAIN SCENARIO / QUESTION SECTION (PRIMARY FOCUS) */}
         {!analysis && !isEvaluating && (
           <div>
             {!activeScenario ? (
-              <div className="bg-zinc-900 border border-zinc-800 p-8 py-10 rounded-3xl text-center space-y-5 shadow-xl">
-                <Target className="w-10 h-10 text-zinc-600 mb-3 mx-auto" />
+              <div className="bg-white border border-slate-200 p-8 py-10 rounded-3xl text-center space-y-5 shadow-sm">
+                <Target className="w-10 h-10 text-slate-400 mb-3 mx-auto" />
                 <div className="max-w-md mx-auto space-y-1.5">
-                  <h3 className="text-lg font-bold text-white">No Scenario Active</h3>
-                  <p className="text-xs text-zinc-400 leading-relaxed">
+                  <h3 className="text-lg font-bold text-slate-900">No Scenario Active</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
                     Select a competency domain above to generate a high-stakes, realistic interview scenario.
                   </p>
                 </div>
                 <button
                   onClick={() => generateQuestion()}
                   disabled={isGeneratingQ}
-                  className="bg-white text-black font-extrabold py-3.5 px-8 rounded-2xl hover:bg-zinc-200 transition-colors shadow-md text-sm flex items-center justify-center gap-2 mx-auto"
+                  className="bg-gradient-to-r from-[#fbbf24] to-[#f97316] hover:opacity-90 text-black font-extrabold py-3.5 px-8 rounded-2xl transition-all shadow-md text-sm flex items-center justify-center gap-2 mx-auto cursor-pointer"
                 >
                   {isGeneratingQ ? (
                     <>
@@ -1233,34 +1241,34 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
               </div>
             ) : isPreparing ? (
               /* Preparation State UI */
-              <div className="mt-8 p-8 bg-zinc-900 border border-zinc-700/50 rounded-2xl text-center shadow-2xl space-y-6 animate-fade-in">
+              <div className="mt-8 p-8 bg-white border border-slate-200 rounded-2xl text-center shadow-sm space-y-6 animate-fade-in">
                 <div className="flex justify-center mb-2">
-                  <div className="p-4 bg-blue-500/10 rounded-full border border-blue-500/20">
-                    <Brain className="w-8 h-8 text-blue-400 animate-pulse" />
+                  <div className="p-4 bg-amber-50 rounded-full border border-amber-200">
+                    <Brain className="w-8 h-8 text-[#f97316] animate-pulse" />
                   </div>
                 </div>
                 
                 <div className="max-w-xl mx-auto space-y-2">
-                  <h3 className="text-2xl font-bold text-white leading-snug">Take a moment to structure your answer</h3>
-                  <p className="text-zinc-400 text-sm font-light">Take 15 seconds to mentally map your story before speaking.</p>
+                  <h3 className="text-2xl font-bold text-slate-900 leading-snug">Take a moment to structure your answer</h3>
+                  <p className="text-slate-500 text-sm font-normal">Take 15 seconds to mentally map your story before speaking.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-2xl mx-auto my-6">
-                  <div className="p-4 bg-zinc-950/50 border border-zinc-800 rounded-xl space-y-1">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Situation</span>
-                    <p className="text-sm text-zinc-300 font-medium">What was happening?</p>
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Situation</span>
+                    <p className="text-sm text-slate-800 font-medium">What was happening?</p>
                   </div>
-                  <div className="p-4 bg-zinc-950/50 border border-zinc-800 rounded-xl space-y-1">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Task</span>
-                    <p className="text-sm text-zinc-300 font-medium">What were you responsible for?</p>
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Task</span>
+                    <p className="text-sm text-slate-800 font-medium">What were you responsible for?</p>
                   </div>
-                  <div className="p-4 bg-emerald-950/30 border border-emerald-900/50 rounded-xl space-y-1">
-                    <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Action</span>
-                    <p className="text-sm text-emerald-100/80 font-medium">What specifically did YOU do?</p>
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                    <span className="text-xs font-bold text-[#f97316] uppercase tracking-wider">Action</span>
+                    <p className="text-sm text-amber-900 font-medium">What specifically did YOU do?</p>
                   </div>
-                  <div className="p-4 bg-zinc-950/50 border border-zinc-800 rounded-xl space-y-1">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Result</span>
-                    <p className="text-sm text-zinc-300 font-medium">What was the measurable outcome?</p>
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Result</span>
+                    <p className="text-sm text-slate-800 font-medium">What was the measurable outcome?</p>
                   </div>
                 </div>
 
@@ -1272,196 +1280,330 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
                       setInterviewPhase('main');
                       startRecording();
                     }}
-                    className="inline-flex items-center gap-2 px-8 py-4 bg-white text-black rounded-full font-extrabold hover:bg-zinc-200 transition-colors shadow-xl text-sm"
+                    className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#fbbf24] to-[#f97316] text-black rounded-full font-extrabold hover:opacity-90 transition-all shadow-md text-sm cursor-pointer"
                   >
                     <Mic className="w-5 h-5 text-black" /> Start Recording Now
                   </button>
                   <button
                     onClick={() => setIsPreparing(false)}
-                    className="px-6 py-4 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
+                    className="px-6 py-4 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
                   >
                     Back to Scenario
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="bg-zinc-900 border border-zinc-800 p-6 sm:p-8 rounded-2xl space-y-6 shadow-xl relative overflow-hidden">
-                {/* Header Row: Overline (COMPETENCY · DIFFICULTY) + Target/Timer Pill */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
-                  {/* Overline: COMPETENCY · DIFFICULTY */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold tracking-widest text-zinc-500 uppercase">
-                      {(COMPETENCIES.find(c => c.id === activeCompetency)?.label || activeCompetency).toUpperCase()} · {difficulty.toUpperCase()}
-                    </span>
+            ) : isRecording ? (
+              /* FOCUSED INTERVIEW RECORDING MODE */
+              <div className="bg-white border border-slate-200 p-6 sm:p-10 rounded-3xl space-y-7 shadow-sm relative overflow-hidden animate-in fade-in duration-200">
+                {/* 1. Header: Live Status + Live Audio Waveform + 120s Timer */}
+                <div className="flex justify-between items-center border-b border-slate-100 pb-5 gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
+                      <span className="text-xs font-black tracking-widest text-red-600 uppercase">
+                        LIVE STAR RECORDING
+                      </span>
+                    </div>
+
+                    {/* Live Audio Waveform in Orange STAR Accent */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-full px-3 py-1.5 flex items-center">
+                      <VoiceVisualizer
+                        analyser={analyser}
+                        isListening={isRecording}
+                        color="#f97316"
+                        theme="orange"
+                        barCount={26}
+                        width={120}
+                        height={18}
+                      />
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase self-start sm:self-auto">
-                    <Timer className="w-3 h-3" />
-                    <span className={isRecording ? getTimerColorClass(timeLeft) : ''}>
-                      {isRecording ? `Timer: ${timeLeft}s` : 'Target: 120s'}
+                  {/* 120s Countdown Timer */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Timer className="w-4 h-4 text-slate-400" />
+                    <span className={`text-2xl sm:text-3xl font-mono font-black ${getTimerColorClass(timeLeft)}`}>
+                      {timeLeft}s
                     </span>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  {/* Scenario Context Box */}
-                  <div className="bg-zinc-950 border border-zinc-800/80 p-4 rounded-2xl text-zinc-300 text-xs sm:text-sm font-medium leading-relaxed">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 block mb-1">
-                      Real-World Conflict Context
-                    </span>
-                    {activeScenario.scenarioContext}
-                  </div>
-
-                  {/* Actual Behavioral Question */}
-                  <h2 className="text-xl sm:text-2xl font-extrabold text-white leading-snug">
+                {/* 2. Interview Question Section */}
+                <div className="space-y-2.5">
+                  <span className="text-xs font-black tracking-widest text-[#f97316] uppercase">
+                    YOUR QUESTION
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 leading-snug tracking-tight">
                     {activeScenario.actualQuestion}
                   </h2>
-
-                  {/* Hint: What to focus on in your answer */}
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
-                      <Lightbulb className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>💡 Hint: What to focus on in your answer</span>
-                    </div>
-                    <ul className="text-xs text-zinc-300 space-y-1.5 list-disc list-inside font-medium leading-relaxed">
-                      <li>
-                        <strong className="text-amber-200 font-bold">Situation & Task:</strong> Keep background setup brief (~20s). Clearly define the challenge and your goal.
-                      </li>
-                      <li>
-                        <strong className="text-amber-200 font-bold">Action Phase (55% Focus):</strong> Detail 3–4 specific decisions, technical steps, or actions <span className="text-amber-100 underline decoration-amber-500/50">YOU</span> personally executed.
-                      </li>
-                      <li>
-                        <strong className="text-amber-200 font-bold">Result & Impact:</strong> Conclude with measurable results (numbers, percentage metrics, time saved) and key learnings.
-                      </li>
-                      {activeScenario.whyItWorks && (
-                        <li className="text-zinc-200 italic font-semibold pt-1 border-t border-amber-500/20 mt-1 list-none flex items-start gap-1.5">
-                          <span>✨</span>
-                          <span><strong className="text-amber-300 not-italic">Key Focus:</strong> {activeScenario.whyItWorks}</span>
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-
-
                 </div>
 
-                <div className="pt-2">
-                  {!isRecording && (
-                    <div className="flex flex-col sm:flex-row gap-4 items-center">
-                      <button
-                        onClick={() => { setIsPreparing(true); setInterviewPhase('prep'); }}
-                        className="flex-1 bg-white text-black font-extrabold py-4 px-8 rounded-2xl hover:bg-zinc-200 transition-colors shadow-md text-sm flex items-center justify-center gap-2"
-                      >
-                        <Mic className="w-4 h-4 text-black" />
-                        <span>Start Interview</span>
-                      </button>
-                      <button
-                        onClick={() => generateQuestion()}
-                        disabled={isGeneratingQ}
-                        className="px-4 py-2 text-sm font-medium text-zinc-400 bg-transparent border border-zinc-800 rounded-md hover:text-white hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Shuffle className="w-4 h-4 text-zinc-400" />
-                        <span>Try Another</span>
-                      </button>
+                {/* 3. Compact STAR Progress Indicator Pipeline: S ───── T ───── A ───── R */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3">
+                  <div className="flex items-center justify-between relative px-2 sm:px-6">
+                    {/* Connecting Baseline */}
+                    <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-0.5 bg-slate-200 z-0"></div>
+
+                    {[
+                      { step: 'S', name: 'Situation', target: '10%', time: '~12s', desc: 'Context & challenge' },
+                      { step: 'T', name: 'Task', target: '15%', time: '~18s', desc: 'Your responsibility' },
+                      { step: 'A', name: 'Action', target: '55%', time: '~66s', desc: 'Specific steps you took' },
+                      { step: 'R', name: 'Result', target: '20%', time: '~24s', desc: 'Outcome & impact' }
+                    ].map((item, idx) => {
+                      const isActive = currentStepIndex === idx;
+                      const isPassed = currentStepIndex > idx;
+                      return (
+                        <div key={item.step} className="relative z-10 flex flex-col items-center">
+                          {/* Step Badge */}
+                          <div
+                            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-black text-sm sm:text-base transition-all duration-300 ${
+                              isActive
+                                ? 'bg-gradient-to-b from-[#fbbf24] to-[#f97316] text-black ring-4 ring-amber-500/20 shadow-md scale-105 font-black'
+                                : isPassed
+                                ? 'bg-slate-200 text-slate-800 border border-slate-300'
+                                : 'bg-white text-slate-400 border border-slate-200'
+                            }`}
+                          >
+                            {item.step}
+                          </div>
+
+                          {/* Step Label */}
+                          <div className="text-center mt-2">
+                            <span className={`text-xs font-bold block ${isActive ? 'text-[#f97316]' : isPassed ? 'text-slate-700' : 'text-slate-400'}`}>
+                              {item.name}
+                            </span>
+                            <span className={`text-[10px] font-mono block ${isActive ? 'text-amber-700 font-bold' : 'text-slate-400'}`}>
+                              {item.target}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Active Phase Hint */}
+                  <div className="text-center pt-2 border-t border-slate-200">
+                    <p className="text-xs text-slate-600">
+                      {currentStepIndex === 0 && <span><strong className="text-[#f97316]">Phase: Situation (10%)</strong> — Briefly set up the context and the problem.</span>}
+                      {currentStepIndex === 1 && <span><strong className="text-[#f97316]">Phase: Task (15%)</strong> — State your specific goal and responsibility.</span>}
+                      {currentStepIndex === 2 && <span><strong className="text-[#f97316]">Phase: Action (55%)</strong> — ⭐ Focus most of your time here: 3–4 concrete actions YOU executed.</span>}
+                      {currentStepIndex === 3 && <span><strong className="text-[#f97316]">Phase: Result (20%)</strong> — Share measurable outcomes, impact, and lessons learned.</span>}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 4. Live Speech / Transcription Area */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 sm:p-6 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#f97316] animate-pulse"></span>
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">Live Speech Transcription</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {(transcript + ' ' + interimText).trim().split(/\s+/).filter(Boolean).length} words
+                    </span>
+                  </div>
+
+                  <div className="min-h-[130px] text-slate-800 leading-relaxed font-normal text-sm sm:text-base font-sans p-2 select-text">
+                    {(transcript + (interimText ? ' ' + interimText : '')).trim() ? (
+                      <span>
+                        {transcript}
+                        {interimText && <span className="text-amber-700 italic ml-1">{interimText}</span>}
+                        <span className="inline-block w-1.5 h-4 bg-[#f97316] ml-1.5 animate-pulse align-middle"></span>
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic flex items-center gap-2">
+                        <Mic className="w-4 h-4 text-[#f97316]/70 animate-pulse" />
+                        Listening... Speak clearly into your microphone to answer the question.
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 5. Finish & Review Action Bar */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
+                  <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Timer finishes automatically at 0s, or you can finish early anytime.</span>
+                  </div>
+                  <button
+                    onClick={handleStopAndEvaluate}
+                    className="w-full sm:w-auto bg-gradient-to-r from-[#fbbf24] to-[#f97316] text-black hover:opacity-90 font-extrabold py-3 px-6 rounded-xl transition-all text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-98"
+                  >
+                    <Square className="w-3.5 h-3.5 fill-current text-black" />
+                    <span>Finish Answer Early &amp; Review</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* CLEAN SCENARIO / QUESTION HERO CARD */
+              <div className="bg-white border border-slate-200 p-6 sm:p-9 rounded-3xl space-y-7 shadow-sm relative overflow-hidden">
+                
+                {/* 1. Header: Small Label + Difficulty Badge */}
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-2 h-2 rounded-full bg-[#f97316] animate-pulse"></span>
+                    <span className="text-xs font-black tracking-widest text-slate-700 uppercase">
+                      ASSIGNED SCENARIO
+                    </span>
+                    <span className="text-slate-300 font-bold hidden sm:inline">·</span>
+                    <span className="text-[11px] font-bold tracking-wider text-slate-500 uppercase hidden sm:inline">
+                      {(COMPETENCIES.find(c => c.id === activeCompetency)?.label || activeCompetency).toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-amber-50 text-[#f97316] border border-amber-200 uppercase tracking-wider">
+                      {difficulty} Difficulty
+                    </span>
+                    <span className="text-xs font-mono text-slate-400 hidden sm:inline">Target: 120s</span>
+                  </div>
+                </div>
+
+                {/* 2. Dominant Interview Question (Visual HERO) */}
+                <div className="space-y-3">
+                  <span className="text-[11px] font-extrabold tracking-widest text-[#f97316] uppercase block">
+                    INTERVIEW QUESTION
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl md:text-[32px] font-extrabold text-slate-900 leading-snug tracking-tight">
+                    &ldquo;{activeScenario.actualQuestion}&rdquo;
+                  </h2>
+                </div>
+
+                {/* 3. Collapsible Real-World Context ("View Context ↓") */}
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
+                  <button
+                    type="button"
+                    onClick={() => setShowScenarioContext(!showScenarioContext)}
+                    className="w-full flex items-center justify-between p-3.5 px-4 text-left cursor-pointer hover:bg-slate-100/70 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-800">
+                        {showScenarioContext ? 'Hide Context ↑' : 'View Context ↓'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {showScenarioContext ? 'Collapse' : 'Real-World Conflict Context'}
+                    </span>
+                  </button>
+
+                  {showScenarioContext && (
+                    <div className="p-4 border-t border-slate-200 bg-white text-slate-700 text-xs sm:text-sm leading-relaxed space-y-1.5 animate-in fade-in duration-150">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#f97316] block">
+                        REAL-WORLD CONTEXT
+                      </span>
+                      <p className="text-slate-600 font-normal leading-relaxed">
+                        {activeScenario.scenarioContext}
+                      </p>
                     </div>
                   )}
                 </div>
+
+                {/* 4. Collapsible Hint Section ("Need a Hint? →" / "Need a Hint? ↓") */}
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
+                  <button
+                    type="button"
+                    onClick={() => setShowHelp(!showHelp)}
+                    className="w-full flex items-center justify-between p-3.5 px-4 text-left cursor-pointer hover:bg-slate-100/70 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Lightbulb className="w-3.5 h-3.5 text-[#f97316]" />
+                      <span className="text-xs font-bold text-slate-800">
+                        {showHelp ? 'Need a Hint? ↑' : 'Need a Hint? →'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {showHelp ? 'Hide Guidance' : 'STAR Strategy & Focus'}
+                    </span>
+                  </button>
+
+                  {showHelp && (
+                    <div className="p-4 sm:p-5 border-t border-slate-200 bg-white space-y-3.5 animate-in fade-in duration-150">
+                      <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
+                        <div className="flex items-center gap-2 text-xs font-bold text-[#f97316] uppercase tracking-wider">
+                          <span>💡 Answer Guidance &amp; Tips</span>
+                        </div>
+                        <ul className="text-xs text-slate-700 space-y-1.5 list-disc list-inside font-normal leading-relaxed">
+                          <li>
+                            <strong className="text-slate-900 font-bold">Situation &amp; Task:</strong> Keep background setup concise (~20s total). Clearly outline your responsibility.
+                          </li>
+                          <li>
+                            <strong className="text-slate-900 font-bold">Action Phase (55% Focus):</strong> Detail 3–4 specific decisions, technical steps, or actions <span className="text-amber-900 underline decoration-amber-500/50">YOU</span> executed personally.
+                          </li>
+                          <li>
+                            <strong className="text-slate-900 font-bold">Result &amp; Impact:</strong> Conclude with measurable metrics, percentages, time saved, and core learnings.
+                          </li>
+                          {activeScenario.whyItWorks && (
+                            <li className="text-slate-800 italic font-semibold pt-1 border-t border-amber-200 mt-1 list-none flex items-start gap-1.5">
+                              <span>✨</span>
+                              <span><strong className="text-[#f97316] not-italic">Key Focus:</strong> {activeScenario.whyItWorks}</span>
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+
+                      {activeScenario.modelAnswer && (
+                        <ModelAnswerDrawer answerData={activeScenario.modelAnswer} whyItWorks={activeScenario.whyItWorks} />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Start Interview Button & Secondary "Try Another" */}
+                {!isRecording && (
+                  <div className="space-y-3 pt-3 border-t border-slate-100">
+                    <button
+                      onClick={() => startRecording()}
+                      className="w-full bg-gradient-to-r from-[#fbbf24] to-[#f97316] hover:opacity-95 active:scale-[0.99] text-black font-extrabold py-4 px-8 rounded-2xl transition-all shadow-md text-base sm:text-lg flex items-center justify-center gap-3 cursor-pointer"
+                    >
+                      <Mic className="w-5 h-5 text-black shrink-0" />
+                      <span>Start Interview</span>
+                    </button>
+
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => generateQuestion()}
+                        disabled={isGeneratingQ}
+                        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors py-2 px-4 rounded-xl hover:bg-slate-100 cursor-pointer disabled:opacity-50"
+                      >
+                        <Shuffle className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Try Another</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
           </div>
         )}
 
-        {isRecording && activeScenario && (
-          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-4 gap-4">
-              <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="w-3.5 h-3.5 rounded-full bg-red-500 animate-ping"></span>
-                  <span className="text-xs font-bold text-red-400 uppercase tracking-widest">Live STAR Recording</span>
-                </div>
-                <VoiceVisualizer
-                  analyser={analyser}
-                  isListening={isRecording}
-                  color="#f59e0b"
-                  theme="orange"
-                  barCount={24}
-                  width={120}
-                  height={20}
-                />
-              </div>
-              <span className={`text-3xl font-mono font-bold ${getTimerColorClass(timeLeft)}`}>{timeLeft}s</span>
-            </div>
-
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-4">
-              <div className="grid grid-cols-4 gap-3">
-                {[
-                  { step: 'S', label: 'Situation (10%)' },
-                  { step: 'T', label: 'Task (15%)' },
-                  { step: 'A', label: 'Action (55%)' },
-                  { step: 'R', label: 'Result (20%)' }
-                ].map((item, idx) => {
-                  const isActive = currentStepIndex === idx;
-                  const isPassed = currentStepIndex > idx;
-                  return (
-                    <div
-                      key={item.step}
-                      className={`p-3 rounded-xl border text-center transition-all ${
-                        isActive
-                          ? idx === 2
-                            ? 'bg-emerald-400 text-black border-transparent font-black shadow-md'
-                            : 'bg-white text-black border-transparent font-bold shadow-md'
-                          : isPassed
-                          ? 'bg-zinc-900 border-zinc-700 text-zinc-300'
-                          : 'bg-zinc-950 border-zinc-800 text-zinc-600'
-                      }`}
-                    >
-                      <div className="text-xs font-extrabold">{item.step}</div>
-                      <div className="text-[10px] mt-0.5 font-medium">{item.label}</div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="min-h-[120px] text-zinc-200 leading-relaxed font-light text-sm border-t border-zinc-800/80 pt-4">
-                {(transcript + (interimText ? ' ' + interimText : '')).trim() || <span className="text-zinc-500 italic">Listening... Remember to spend 55% (~66s) describing your specific Actions.</span>}
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={handleStopAndEvaluate}
-                className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-bold py-2.5 px-4 rounded-xl transition-all text-xs flex items-center gap-2 shadow-sm"
-              >
-                <Square className="w-3.5 h-3.5 fill-current text-zinc-300" />
-                <span>Finish Answer Early</span>
-              </button>
-            </div>
-          </div>
-        )}
-
         {!isRecording && transcript && !analysis && !isEvaluating && (
-          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6">
+          <div className="bg-white border border-slate-200 p-8 rounded-3xl space-y-6 shadow-sm">
             <div>
-              <h3 className="text-xl font-bold text-white">Review & Edit Transcript</h3>
-              <p className="text-xs text-zinc-400 mt-1">Make any adjustments before sending to the STAR evaluator.</p>
+              <h3 className="text-xl font-bold text-slate-900">Review & Edit Transcript</h3>
+              <p className="text-xs text-slate-500 mt-1">Make any adjustments before sending to the STAR evaluator.</p>
             </div>
 
             <textarea
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              className="w-full min-h-[180px] bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-zinc-200 focus:outline-none focus:border-zinc-500 transition-all font-light text-sm"
+              className="w-full min-h-[180px] bg-slate-50 border border-slate-200 rounded-2xl p-5 text-slate-900 focus:outline-none focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/20 transition-all font-normal text-sm"
             />
 
             <div className="flex gap-4">
               <button
                 onClick={() => { setTranscript(''); setActiveScenario(null); }}
-                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-4 rounded-2xl transition-all text-sm"
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-2xl transition-all text-sm border border-slate-200"
               >
                 Discard
               </button>
               <button
                 onClick={() => evaluateSpeech()}
-                className="flex-[2] bg-white text-black font-bold hover:bg-zinc-200 py-4 rounded-2xl transition-colors shadow-md text-sm flex items-center justify-center gap-2"
+                className="flex-[2] bg-gradient-to-r from-[#fbbf24] to-[#f97316] text-black font-extrabold hover:opacity-90 py-4 rounded-2xl transition-colors shadow-sm text-sm flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-black" />
                 <span>Generate STAR Evaluation</span>
@@ -1471,318 +1613,472 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
         )}
 
         {isEvaluating && (
-          <div className="bg-zinc-900 border border-zinc-800 p-16 rounded-3xl text-center space-y-4">
-            <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <h3 className="text-xl font-bold text-white">Evaluating STAR Structure...</h3>
-            <p className="text-xs text-zinc-400">Grading Situation (10%), Task (15%), Action (55%), and Result (20%).</p>
+          <div className="bg-white border border-slate-200 p-16 rounded-3xl text-center space-y-4 shadow-sm">
+            <div className="w-12 h-12 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <h3 className="text-xl font-bold text-slate-900">Evaluating STAR Structure...</h3>
+            <p className="text-xs text-slate-500">Grading Situation (10%), Task (15%), Action (55%), and Result (20%).</p>
           </div>
         )}
 
         {analysis && activeScenario && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div>
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Evaluation Summary</span>
-                <h3 className="text-xl font-bold text-white mt-1">{activeScenario.actualQuestion}</h3>
-                <p className="text-sm text-zinc-300 mt-2 max-w-xl leading-relaxed">{analysis.feedback}</p>
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Question Summary Banner */}
+            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-3 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] font-black tracking-widest text-[#f97316] uppercase">
+                    STAR EVALUATION REPORT
+                  </span>
+                  <span className="text-slate-300 font-bold">·</span>
+                  <span className="text-[11px] font-bold tracking-wider text-slate-500 uppercase">
+                    {(COMPETENCIES.find(c => c.id === activeCompetency)?.label || activeCompetency).toUpperCase()} · {difficulty.toUpperCase()}
+                  </span>
+                </div>
+                <span className="text-xs font-mono text-slate-400">
+                  Duration: {120 - timeLeft}s answered
+                </span>
               </div>
-              <div className="text-center bg-zinc-950 border border-zinc-800 rounded-2xl p-6 min-w-[130px] shrink-0">
-                <span className="text-4xl font-extrabold text-white">{analysis.overallScore}<span className="text-sm text-zinc-500">/10</span></span>
-                <span className="text-[10px] font-bold text-zinc-400 uppercase block mt-1">STAR Score</span>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-snug">
+                {activeScenario.actualQuestion}
+              </h2>
+            </div>
+
+            {/* ========================================================================= */}
+            {/* 1. STAR PERFORMANCE (How did I perform?) */}
+            {/* ========================================================================= */}
+            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                <div>
+                  <span className="text-xs font-black tracking-widest text-slate-500 uppercase block">
+                    STAR PERFORMANCE
+                  </span>
+                  <h3 className="text-lg font-bold text-slate-900 mt-1">
+                    Methodology &amp; Pillar Breakdown
+                  </h3>
+                </div>
+
+                {/* Overall Score Badge */}
+                <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:px-6 shrink-0 self-start sm:self-auto">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">
+                      Overall Score
+                    </span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl sm:text-4xl font-black text-slate-900">
+                        {analysis.overallScore ?? 8}
+                      </span>
+                      <span className="text-sm font-semibold text-slate-400">/10</span>
+                    </div>
+                  </div>
+                  {scorecardData?.overallScore && (
+                    <div className="border-l border-slate-200 pl-4">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">
+                        Accuracy
+                      </span>
+                      <span className="text-2xl sm:text-3xl font-black text-[#f97316]">
+                        {scorecardData.overallScore}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Overall Feedback Summary */}
+              {analysis.feedback && (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-700 leading-relaxed font-normal">
+                  {analysis.feedback}
+                </div>
+              )}
+
+              {/* 4-Pillar STAR Breakdown (Situation, Task, Action, Result) */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                {/* SITUATION */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+                      Situation
+                    </span>
+                    <span className="text-xs font-mono font-bold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                      {(analysis.starScores?.situation ?? analysis.starScores?.Situation ?? 8)}/10
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900">
+                      {analysis.starScores?.situation ?? analysis.starScores?.Situation ?? 8}
+                      <span className="text-xs font-normal text-slate-400">/10</span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-2">
+                      <div
+                        className="bg-blue-600 h-full rounded-full transition-all"
+                        style={{ width: `${((analysis.starScores?.situation ?? analysis.starScores?.Situation ?? 8) / 10) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500 pt-1">Target: 10% (~12s) · Context</p>
+                </div>
+
+                {/* TASK */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+                      Task
+                    </span>
+                    <span className="text-xs font-mono font-bold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                      {(analysis.starScores?.task ?? analysis.starScores?.Task ?? 8)}/10
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900">
+                      {analysis.starScores?.task ?? analysis.starScores?.Task ?? 8}
+                      <span className="text-xs font-normal text-slate-400">/10</span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-2">
+                      <div
+                        className="bg-purple-600 h-full rounded-full transition-all"
+                        style={{ width: `${((analysis.starScores?.task ?? analysis.starScores?.Task ?? 8) / 10) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500 pt-1">Target: 15% (~18s) · Role</p>
+                </div>
+
+                {/* ACTION (STAR Hero Orange Theme) */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/70 border border-amber-300 space-y-2 flex flex-col justify-between shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-amber-900 flex items-center gap-1">
+                      <span>⭐</span> Action
+                    </span>
+                    <span className="text-xs font-mono font-bold text-[#f97316] bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
+                      {(analysis.starScores?.action ?? analysis.starScores?.Action ?? 8)}/10
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-2xl sm:text-3xl font-black text-amber-900">
+                      {analysis.starScores?.action ?? analysis.starScores?.Action ?? 8}
+                      <span className="text-xs font-normal text-amber-700">/10</span>
+                    </div>
+                    <div className="w-full bg-amber-200 h-1.5 rounded-full overflow-hidden mt-2">
+                      <div
+                        className="bg-[#f97316] h-full rounded-full transition-all"
+                        style={{ width: `${((analysis.starScores?.action ?? analysis.starScores?.Action ?? 8) / 10) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-amber-800 font-medium pt-1">Target: 55% (~66s) · Steps</p>
+                </div>
+
+                {/* RESULT */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+                      Result
+                    </span>
+                    <span className="text-xs font-mono font-bold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                      {(analysis.starScores?.result ?? analysis.starScores?.Result ?? 8)}/10
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900">
+                      {analysis.starScores?.result ?? analysis.starScores?.Result ?? 8}
+                      <span className="text-xs font-normal text-slate-400">/10</span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-2">
+                      <div
+                        className="bg-emerald-600 h-full rounded-full transition-all"
+                        style={{ width: `${((analysis.starScores?.result ?? analysis.starScores?.Result ?? 8) / 10) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500 pt-1">Target: 20% (~24s) · Metrics</p>
+                </div>
+              </div>
+
+              {/* Pacing Warning if present */}
+              {pacingWarning && (
+                <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <p className="text-xs sm:text-sm text-red-800 leading-relaxed font-normal">
+                    <strong className="text-red-700 font-bold">Pacing Warning:</strong> {pacingWarning}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* ========================================================================= */}
+            {/* 2. WHAT YOU DID WELL (What did I do well?) */}
+            {/* ========================================================================= */}
+            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-4 shadow-sm">
+              <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3.5">
+                <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black tracking-widest text-emerald-700 uppercase">
+                    WHAT YOU DID WELL
+                  </h3>
+                  <p className="text-xs text-slate-500">Strengths identified in your response</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {analysis.strengths && analysis.strengths.length > 0 ? (
+                  <ul className="space-y-2.5">
+                    {analysis.strengths.map((str: string, i: number) => (
+                      <li key={i} className="flex items-start gap-3 text-xs sm:text-sm text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                        <span className="text-emerald-600 font-bold mt-0.5">✓</span>
+                        <span>{str}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                    <span className="text-emerald-600 font-bold mt-0.5">✓</span>
+                    <span>Structured your answer following the STAR sequence and articulated your responsibilities clearly.</span>
+                  </div>
+                )}
+
+                {scorecardData?.feedback?.whatWorked && (
+                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs sm:text-sm text-emerald-900 leading-relaxed flex items-start gap-2.5">
+                    <span className="text-emerald-600">✨</span>
+                    <span>{scorecardData.feedback.whatWorked}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* STAR Coverage Results UI Component */}
-            {evalCoverage && (
-              <div className="mt-8 p-6 bg-zinc-900 border border-zinc-800 rounded-xl space-y-6 shadow-xl">
-                <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-                  <h3 className="text-lg font-bold text-white">STAR Coverage Analysis</h3>
-                  <span className="text-xs font-mono text-zinc-500">Pacing & Phase Completion</span>
+            {/* ========================================================================= */}
+            {/* 3. WHAT TO IMPROVE (What should I improve?) */}
+            {/* ========================================================================= */}
+            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-4 shadow-sm">
+              <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3.5">
+                <div className="p-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-600">
+                  <TrendingUp className="w-4 h-4" />
                 </div>
-                
-                <div className="space-y-4">
-                  {/* Situation Bar */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-zinc-300 font-semibold">Situation</span>
-                      <span className="text-zinc-400 font-mono font-bold">{evalCoverage.S_score}%</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800">
-                      <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${evalCoverage.S_score}%` }}></div>
-                    </div>
-                  </div>
-
-                  {/* Task Bar */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-zinc-300 font-semibold">Task</span>
-                      <span className="text-zinc-400 font-mono font-bold">{evalCoverage.T_score}%</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800">
-                      <div className="h-full bg-purple-500 rounded-full transition-all duration-500" style={{ width: `${evalCoverage.T_score}%` }}></div>
-                    </div>
-                  </div>
-
-                  {/* Action Bar */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-zinc-300 font-semibold">Action</span>
-                      <span className="text-zinc-400 font-mono font-bold">{evalCoverage.A_score}%</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800">
-                      <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${evalCoverage.A_score}%` }}></div>
-                    </div>
-                  </div>
-
-                  {/* Result Bar */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-zinc-300 font-semibold">Result</span>
-                      <span className={`font-mono font-bold ${evalCoverage.R_score < 50 ? 'text-red-400 font-black' : 'text-zinc-400'}`}>
-                        {evalCoverage.R_score}%
-                      </span>
-                    </div>
-                    <div className="w-full h-2.5 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800">
-                      <div className={`h-full rounded-full transition-all duration-500 ${evalCoverage.R_score < 50 ? 'bg-red-500' : 'bg-amber-400'}`} style={{ width: `${evalCoverage.R_score}%` }}></div>
-                    </div>
-                  </div>
+                <div>
+                  <h3 className="text-xs font-black tracking-widest text-[#f97316] uppercase">
+                    WHAT TO IMPROVE
+                  </h3>
+                  <p className="text-xs text-slate-500">Key gaps to address before your actual interview</p>
                 </div>
+              </div>
 
-                {/* AI Pacing Warning */}
-                {pacingWarning && (
-                  <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-md mt-4">
-                    <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-zinc-200 leading-relaxed font-light">
-                      <span className="font-bold text-red-400">Pacing Warning:</span> {pacingWarning}
+              <div className="space-y-3">
+                {analysis.missingElements && analysis.missingElements.length > 0 && (
+                  <ul className="space-y-2.5">
+                    {analysis.missingElements.map((elem: string, i: number) => (
+                      <li key={i} className="flex items-start gap-3 text-xs sm:text-sm text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                        <span className="text-[#f97316] font-bold mt-0.5">⚠</span>
+                        <span>{elem}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {scorecardData?.feedback?.biggestImprovement && (
+                  <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs sm:text-sm text-amber-900 leading-relaxed flex items-start gap-2.5">
+                    <span className="text-[#f97316]">🎯</span>
+                    <div>
+                      <strong className="text-amber-950 font-bold block mb-0.5">Biggest Improvement Opportunity:</strong>
+                      <span>{scorecardData.feedback.biggestImprovement}</span>
+                    </div>
+                  </div>
+                )}
+
+                {evaluationWarnings && evaluationWarnings.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    {evaluationWarnings.map((w, i) => (
+                      <div key={i} className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2">
+                        <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" />
+                        <span><strong className="font-bold">{w.type}:</strong> {w.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ========================================================================= */}
+            {/* 4. COACHING TIP */}
+            {/* ========================================================================= */}
+            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-4 shadow-sm">
+              <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3.5">
+                <div className="p-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-600">
+                  <Lightbulb className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black tracking-widest text-blue-700 uppercase">
+                    COACHING TIP
+                  </h3>
+                  <p className="text-xs text-slate-500">Actionable advice &amp; recommended phrasing</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {analysis.idealAnswerSnippet && (
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block">
+                      Recommended Rephrasing / Ideal Snippet
+                    </span>
+                    <p className="text-xs sm:text-sm text-slate-800 italic border-l-2 border-[#f97316] pl-3 leading-relaxed">
+                      "{analysis.idealAnswerSnippet}"
                     </p>
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Scorecard Container */}
-            {scorecardData && (
-              <div className="mt-8 p-6 sm:p-8 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl space-y-8">
-                {/* Header & Overall Score */}
-                <div className="flex items-center justify-between pb-6 border-b border-zinc-800">
+                {activeScenario.whyItWorks && (
+                  <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs sm:text-sm text-slate-800 leading-relaxed flex items-start gap-2.5">
+                    <span className="text-[#f97316]">💡</span>
+                    <div>
+                      <strong className="text-amber-950 font-bold block mb-0.5">Key Focus Insight:</strong>
+                      <span>{activeScenario.whyItWorks}</span>
+                    </div>
+                  </div>
+                )}
+
+                {scorecardData?.feedback?.tryAgain && (
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
+                    <strong className="text-slate-800 font-semibold">For your next attempt:</strong> {scorecardData.feedback.tryAgain}
+                  </div>
+                )}
+
+                {/* Improve My Answer Transformation Action */}
+                {!improvedAnswer && (
+                  <button
+                    onClick={handleImproveAnswer}
+                    disabled={isImproving}
+                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isImproving ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <span>Restructuring Your Response into Stronger STAR Format...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-white" />
+                        <span>✨ Restructure My Answer into an Exemplary STAR Version</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* Improved Answer Transformation Result Card */}
+                {improvedAnswer && (
+                  <div className="bg-white border border-emerald-300 p-5 sm:p-6 rounded-2xl space-y-4 shadow-sm animate-in fade-in duration-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-emerald-600" />
+                        <h4 className="text-sm font-extrabold text-slate-900">
+                          Your Answer <span className="text-slate-400 font-normal">→</span> <span className="text-emerald-700">Exemplary STAR Version</span>
+                        </h4>
+                      </div>
+                      <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-bold">
+                        Real Experience Preserved
+                      </span>
+                    </div>
+
+                    {improvedAnswer.keyImprovements && improvedAnswer.keyImprovements.length > 0 && (
+                      <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl space-y-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 block mb-1">
+                          Key STAR Transformations Applied
+                        </span>
+                        <ul className="text-xs text-slate-700 space-y-1 list-disc list-inside">
+                          {improvedAnswer.keyImprovements.map((imp, idx) => (
+                            <li key={idx} className="font-normal">{imp}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="space-y-2.5 text-xs sm:text-sm">
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-0.5">
+                        <span className="text-xs font-bold text-slate-600">S — Situation</span>
+                        <p className="text-slate-800 font-normal leading-relaxed">{improvedAnswer.situation}</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-0.5">
+                        <span className="text-xs font-bold text-slate-600">T — Task</span>
+                        <p className="text-slate-800 font-normal leading-relaxed">{improvedAnswer.task}</p>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-0.5">
+                        <span className="text-xs font-bold text-emerald-800">A — Action (55% Personal Ownership)</span>
+                        <p className="text-emerald-950 font-medium leading-relaxed">{improvedAnswer.action}</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-0.5">
+                        <span className="text-xs font-bold text-slate-600">R — Result</span>
+                        <p className="text-slate-800 font-normal leading-relaxed">{improvedAnswer.result}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ========================================================================= */}
+            {/* 5. TRANSCRIPT */}
+            {/* ========================================================================= */}
+            <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-4 shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700">
+                    <Mic className="w-4 h-4" />
+                  </div>
                   <div>
-                    <h2 className="text-2xl font-extrabold text-white">Your STAR Score</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Detailed metric breakdown & qualitative feedback.</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-semibold text-zinc-500 uppercase tracking-widest block mb-1">Overall</span>
-                    <span className="text-4xl font-black text-emerald-400">{scorecardData.overallScore}<span className="text-xl text-zinc-600">/100</span></span>
-                  </div>
-                </div>
-
-                {/* Score Breakdown Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left mb-6">
-                    <thead>
-                      <tr className="border-b border-zinc-800 text-zinc-500 text-xs uppercase tracking-wider">
-                        <th className="pb-3 font-semibold">Area</th>
-                        <th className="pb-3 font-semibold text-right">Score</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-800/50">
-                      {Object.entries(scorecardData.breakdown).map(([area, metrics]) => (
-                        <tr key={area}>
-                          <td className="py-3 text-zinc-300 font-medium text-sm">{area}</td>
-                          <td className="py-3 text-right font-mono text-zinc-400 text-sm">
-                            <span className="text-white font-bold">{metrics.score}</span>/{metrics.outOf}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Qualitative Feedback Blocks */}
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="p-5 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-                    <h4 className="flex items-center gap-2 text-blue-400 font-bold mb-2 text-sm">
-                      🎯 Biggest improvement
-                    </h4>
-                    <p className="text-sm text-zinc-300 leading-relaxed">{scorecardData.feedback.biggestImprovement}</p>
-                  </div>
-                  
-                  <div className="p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                    <h4 className="flex items-center gap-2 text-emerald-400 font-bold mb-2 text-sm">
-                      ✅ What worked
-                    </h4>
-                    <p className="text-sm text-zinc-300 leading-relaxed">{scorecardData.feedback.whatWorked}</p>
-                  </div>
-
-                  <div className="p-5 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                    <h4 className="flex items-center gap-2 text-amber-500 font-bold mb-2 text-sm">
-                      🔄 Try again
-                    </h4>
-                    <p className="text-sm text-zinc-300 leading-relaxed">{scorecardData.feedback.tryAgain}</p>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-zinc-800">
-                  <button 
-                    onClick={() => {
-                      setAnalysis(null);
-                      setEvaluationWarnings(null);
-                      setEvalCoverage(null);
-                      setPacingWarning(null);
-                      setScorecardData(null);
-                      setImprovedAnswer(null);
-                      setTranscript('');
-                      setIsPreparing(true);
-                    }}
-                    className="px-6 py-3 bg-white text-black font-extrabold rounded-xl hover:bg-zinc-200 transition-colors text-sm"
-                  >
-                    Try Again
-                  </button>
-                  <button 
-                    onClick={() => generateQuestion()}
-                    disabled={isGeneratingQ}
-                    className="px-6 py-3 bg-zinc-800 text-white font-semibold rounded-xl hover:bg-zinc-700 transition-colors border border-zinc-700 text-sm"
-                  >
-                    Next Question
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-6">
-              {analysis.starScores && Object.entries(analysis.starScores).map(([key, val]: any) => {
-                const theme = getScoreTheme(val);
-                const descriptions: Record<string, string> = {
-                  situation: 'Context (Target: 10%)',
-                  task: 'Responsibility (Target: 15%)',
-                  action: 'Steps Taken (Target: 55%)',
-                  result: 'Outcome & Metrics (Target: 20%)'
-                };
-                return (
-                  <div
-                    key={key}
-                    className={`p-4 rounded-xl border bg-zinc-900/60 backdrop-blur-sm transition-all hover:bg-zinc-900 ${theme.border}`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
-                        {key}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${theme.badge}`}>
-                        {val}/10
-                      </span>
-                    </div>
-                    <div className={`text-3xl font-extrabold ${theme.text}`}>
-                      {val}
-                      <span className="text-sm font-normal text-zinc-500">/10</span>
-                    </div>
-                    <p className="text-[11px] text-zinc-500 mt-1">{descriptions[key.toLowerCase()] || 'Metric score'}</p>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-3">
-                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Missing / Weak Elements</h4>
-                <ul className="text-xs text-zinc-300 space-y-2 list-disc list-inside">
-                  {analysis.missingElements?.map((m: string, i: number) => <li key={i}>{m}</li>)}
-                </ul>
-              </div>
-
-              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-3">
-                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Recommended Rephrasing</h4>
-                <p className="text-xs text-zinc-300 italic border-l-2 border-white pl-3 leading-relaxed">
-                  "{analysis.idealAnswerSnippet}"
-                </p>
-              </div>
-            </div>
-
-            {/* Improve My Answer Button */}
-            {!improvedAnswer && (
-              <button
-                onClick={handleImproveAnswer}
-                disabled={isImproving}
-                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-extrabold py-4 px-6 rounded-2xl transition-all shadow-lg text-sm flex items-center justify-center gap-2"
-              >
-                {isImproving ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
-                    <span>Restructuring Your Response into Stronger STAR Format...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-black" />
-                    <span>✨ Improve My Answer (Transform to Stronger STAR Version)</span>
-                  </>
-                )}
-              </button>
-            )}
-
-            {/* Improved Answer Transformation Card */}
-            {improvedAnswer && (
-              <div className="bg-zinc-900 border border-emerald-500/30 p-6 sm:p-8 rounded-3xl space-y-6 shadow-2xl animate-fade-in">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-emerald-400" />
-                    <h3 className="text-lg font-extrabold text-white">
-                      Your Answer <span className="text-zinc-500 font-normal">→</span> <span className="text-emerald-400">Stronger STAR Version</span>
+                    <h3 className="text-xs font-black tracking-widest text-slate-700 uppercase">
+                      TRANSCRIPT
                     </h3>
-                  </div>
-                  <span className="text-xs font-mono text-emerald-400 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-800/60 font-bold self-start sm:self-auto">
-                    Real Experience Preserved
-                  </span>
-                </div>
-
-                {/* Key Transformations Callout */}
-                {improvedAnswer.keyImprovements && improvedAnswer.keyImprovements.length > 0 && (
-                  <div className="bg-zinc-950 border border-zinc-800 p-4 rounded-xl space-y-1.5">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400 block mb-1">
-                      Key STAR Transformations Applied
-                    </span>
-                    <ul className="text-xs text-zinc-300 space-y-1 list-disc list-inside">
-                      {improvedAnswer.keyImprovements.map((imp, idx) => (
-                        <li key={idx} className="font-light text-zinc-300">{imp}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* S-T-A-R Structured Blocks */}
-                <div className="space-y-4 text-xs sm:text-sm">
-                  {/* Situation */}
-                  <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1">
-                    <h4 className="text-xs font-bold text-zinc-300">Situation</h4>
-                    <p className="text-zinc-300 font-light leading-relaxed">{improvedAnswer.situation}</p>
-                  </div>
-
-                  {/* Task */}
-                  <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1">
-                    <h4 className="text-xs font-bold text-zinc-300">Task</h4>
-                    <p className="text-zinc-300 font-light leading-relaxed">{improvedAnswer.task}</p>
-                  </div>
-
-                  {/* Action - Highlighted 55% Personal Ownership */}
-                  <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 space-y-1">
-                    <h4 className="text-xs font-bold text-emerald-400">Action (55% Personal Ownership Focus)</h4>
-                    <p className="text-emerald-100 font-medium leading-relaxed">{improvedAnswer.action}</p>
-                  </div>
-
-                  {/* Result */}
-                  <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1">
-                    <h4 className="text-xs font-bold text-zinc-300">Result</h4>
-                    <p className="text-zinc-300 font-light leading-relaxed">{improvedAnswer.result}</p>
+                    <p className="text-xs text-slate-500">Your recorded verbal response</p>
                   </div>
                 </div>
+                <span className="text-xs font-mono text-slate-400">
+                  {transcript.trim().split(/\s+/).filter(Boolean).length} words
+                </span>
               </div>
-            )}
 
-            <button
-              onClick={() => { setAnalysis(null); setEvaluationWarnings(null); setEvalCoverage(null); setPacingWarning(null); setImprovedAnswer(null); setTranscript(''); setActiveScenario(null); }}
-              className="w-full bg-white text-black font-bold hover:bg-zinc-200 py-4 rounded-2xl transition-colors text-sm flex items-center justify-center gap-2"
-            >
-              <RotateCcw className="w-4 h-4 text-black" />
-              <span>Practice Another Behavioral Scenario</span>
-            </button>
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-slate-900 text-xs sm:text-sm leading-relaxed font-normal whitespace-pre-wrap select-text">
+                {transcript || <span className="text-slate-400 italic">No transcript recorded.</span>}
+              </div>
+            </div>
+
+            {/* ========================================================================= */}
+            {/* 6. ACTION BUTTONS */}
+            {/* ========================================================================= */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setAnalysis(null);
+                  setEvaluationWarnings(null);
+                  setEvalCoverage(null);
+                  setPacingWarning(null);
+                  setScorecardData(null);
+                  setImprovedAnswer(null);
+                  setTranscript('');
+                  setActiveScenario(null);
+                  generateQuestion();
+                }}
+                className="w-full sm:flex-1 bg-gradient-to-r from-[#fbbf24] to-[#f97316] text-black font-extrabold hover:opacity-90 py-4 px-6 rounded-2xl transition-all shadow-md text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              >
+                <RotateCcw className="w-4 h-4 text-black" />
+                <span>Practice Another Behavioral Scenario</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setAnalysis(null);
+                  setEvaluationWarnings(null);
+                  setEvalCoverage(null);
+                  setPacingWarning(null);
+                  setScorecardData(null);
+                  setImprovedAnswer(null);
+                  setTranscript('');
+                  setIsPreparing(false);
+                  startRecording();
+                }}
+                className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold py-4 px-6 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              >
+                <Mic className="w-4 h-4 text-[#f97316]" />
+                <span>Re-record This Question</span>
+              </button>
+            </div>
           </div>
         )}
       </div>

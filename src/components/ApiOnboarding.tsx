@@ -77,7 +77,7 @@ export default function ApiOnboarding({ onComplete, isModal = false, onClose }: 
             <div className="bg-white border border-slate-200/80 rounded-2xl p-5 hover:bg-slate-50 transition-all duration-300 hover:-translate-y-0.5 shadow-xs">
               <div className="text-2xl sm:text-3xl mb-2">3️⃣</div>
               <h3 className="text-slate-900 font-bold mb-1 text-sm sm:text-base">Connect Once</h3>
-              <p className="text-xs sm:text-sm text-slate-600">Paste your key below. It will be active across JAM, STAR Coach, &amp; Mock HR.</p>
+              <p className="text-xs sm:text-sm text-slate-600">Paste your key below. It will be active across JAM, STAR Coach, &amp; AI Mock Interview.</p>
             </div>
           </div>
 

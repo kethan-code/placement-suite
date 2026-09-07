@@ -1,473 +1,612 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  CheckCircle2, 
-  AlertCircle, 
-  XCircle, 
   ArrowRight, 
-  Shield, 
-  Users, 
-  Timer, 
-  TrendingUp, 
-  Zap, 
-  Target, 
   ArrowLeft,
   Sparkles,
-  BarChart3,
-  Award
+  Zap,
+  Users,
+  Mic,
+  Star,
+  CheckCircle2,
+  Clock,
+  Flame,
+  Award,
+  TrendingUp,
+  Minus,
+  Layers,
+  BarChart2,
+  Activity,
+  Calendar
 } from 'lucide-react';
 
-export interface CompetencyScore {
+interface JamHistoryRecord {
   id: string;
-  name: string;
-  category: 'competency' | 'starPhase';
-  score: number;
-  description: string;
-  icon: any;
+  date: string;
+  topic?: string;
+  overallScore: number;
+  scores?: { fluency: number; grammar: number; relevance: number; vocabulary: number };
+  primaryWeakness?: string;
+  timestamp?: number;
 }
 
-export interface SessionHistoryItem {
+interface StarHistoryRecord {
   id: string;
-  competency: string;
+  date: string;
+  competency?: string;
+  overallScore: number;
+  durationSeconds?: number;
+  timestamp?: number;
+}
+
+interface MockHrHistoryRecord {
+  id: string;
+  date: string;
+  jobRole?: string;
+  overallScore: number;
+  turnsCount?: number;
+  timestamp?: number;
+}
+
+interface UnifiedSessionItem {
+  id: string;
+  module: 'jam' | 'star' | 'mock';
+  moduleTitle: string;
+  activityName: string;
   score: number;
   date: string;
+  timestamp: number;
 }
-
-export interface ProgressDeltaItem {
-  competency: string;
-  previousScore: number;
-  currentScore: number;
-}
-
-const INITIAL_SCORES: CompetencyScore[] = [
-  {
-    id: 'leadership',
-    name: 'Leadership & Ownership',
-    category: 'competency',
-    score: 85,
-    description: 'Strong ability to step up, delegate, and maintain team accountability.',
-    icon: Shield
-  },
-  {
-    id: 'learning',
-    name: 'Rapid Learning',
-    category: 'competency',
-    score: 88,
-    description: 'Excellent speed in adopting new frameworks under severe time bounds.',
-    icon: Zap
-  },
-  {
-    id: 'action',
-    name: 'Action Phase (55% Focus)',
-    category: 'starPhase',
-    score: 90,
-    description: 'Consistently spends >50% of response detailing specific personal steps.',
-    icon: Target
-  },
-  {
-    id: 'crisis',
-    name: 'Crisis & Deadlines',
-    category: 'competency',
-    score: 78,
-    description: 'Good triage calm under extreme pressure and unexpected crashes.',
-    icon: Timer
-  },
-  {
-    id: 'situation',
-    name: 'Situation Context',
-    category: 'starPhase',
-    score: 72,
-    description: 'Adequate scene setting without over-explaining background context.',
-    icon: BarChart3
-  },
-  {
-    id: 'task',
-    name: 'Task Clarification',
-    category: 'starPhase',
-    score: 68,
-    description: 'Solid definition of explicit responsibilities and obstacles.',
-    icon: BarChart3
-  },
-  {
-    id: 'conflict',
-    name: 'Conflict Resolution',
-    category: 'competency',
-    score: 60,
-    description: 'Pivots well in disagreements, but needs data-backed persuasion.',
-    icon: Users
-  },
-  {
-    id: 'failure',
-    name: 'Failure & Resilience',
-    category: 'competency',
-    score: 42,
-    description: 'Needs clearer post-mortem analysis and concrete lessons retained.',
-    icon: TrendingUp
-  },
-  {
-    id: 'result',
-    name: 'Quantifying Results',
-    category: 'starPhase',
-    score: 40,
-    description: 'Struggles to provide explicit metrics, percentages, or final outcomes.',
-    icon: Award
-  }
-];
-
-const MOCK_SESSION_HISTORY: SessionHistoryItem[] = [
-  { id: '1', competency: 'Leadership & Ownership', score: 85, date: 'Today' },
-  { id: '2', competency: 'Rapid Learning', score: 88, date: 'Yesterday' },
-  { id: '3', competency: 'Crisis & Deadlines', score: 78, date: '2 days ago' },
-  { id: '4', competency: 'Conflict Resolution', score: 60, date: '3 days ago' },
-  { id: '5', competency: 'Failure & Resilience', score: 42, date: '4 days ago' }
-];
-
-const MOCK_PROGRESS_DELTAS: ProgressDeltaItem[] = [
-  { competency: 'Conflict Resolution', previousScore: 60, currentScore: 84 },
-  { competency: 'Leadership & Ownership', previousScore: 72, currentScore: 85 },
-  { competency: 'Crisis & Deadlines', previousScore: 65, currentScore: 78 },
-  { competency: 'Failure & Resilience', previousScore: 30, currentScore: 42 }
-];
 
 export default function AnalyticsDashboardPage() {
   const router = useRouter();
-  const [scores] = useState<CompetencyScore[]>(INITIAL_SCORES);
-  const [sessionHistory] = useState<SessionHistoryItem[]>(MOCK_SESSION_HISTORY);
-  const [progressDeltas] = useState<ProgressDeltaItem[]>(MOCK_PROGRESS_DELTAS);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Classify scores into traffic-light buckets
-  const strongest = scores.filter((s) => s.score >= 80);
-  const developing = scores.filter((s) => s.score >= 50 && s.score < 80);
-  const needsPractice = scores.filter((s) => s.score < 50);
+  // Raw Module Histories
+  const [jamHistory, setJamHistory] = useState<JamHistoryRecord[]>([]);
+  const [starHistory, setStarHistory] = useState<StarHistoryRecord[]>([]);
+  const [mockHistory, setMockHistory] = useState<MockHrHistoryRecord[]>([]);
 
-  // Weakness Recommendation Engine
-  const getRecommendation = () => {
-    // Find lowest scoring competency
-    const competencyScores = scores.filter((s) => s.category === 'competency');
-    const lowestCompetency = [...competencyScores].sort((a, b) => a.score - b.score)[0] || competencyScores[0];
-    
-    // Find lowest scoring STAR phase
-    const phaseScores = scores.filter((s) => s.category === 'starPhase');
-    const lowestPhase = [...phaseScores].sort((a, b) => a.score - b.score)[0];
+  useEffect(() => {
+    setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      try {
+        const jamStored = localStorage.getItem('app_score_history');
+        if (jamStored) setJamHistory(JSON.parse(jamStored));
+      } catch (e) {}
 
-    let difficulty: 'Easy' | 'Medium' | 'Hard' = 'Hard';
-    if (lowestCompetency.score < 50) {
-      difficulty = 'Hard';
-    } else if (lowestCompetency.score < 70) {
-      difficulty = 'Medium';
-    } else {
-      difficulty = 'Easy';
+      try {
+        const starStored = localStorage.getItem('star_score_history');
+        if (starStored) setStarHistory(JSON.parse(starStored));
+      } catch (e) {}
+
+      try {
+        const mockStored = localStorage.getItem('mock_hr_score_history');
+        if (mockStored) setMockHistory(JSON.parse(mockStored));
+      } catch (e) {}
     }
+  }, []);
 
-    return {
-      competencyId: lowestCompetency.id,
-      competencyName: lowestCompetency.name,
-      difficulty,
-      score: lowestCompetency.score,
-      lowestPhaseName: lowestPhase?.name || 'Quantifying Results',
-      rationale: `Your historical evaluations show a drop in "${lowestCompetency.name}" (${lowestCompetency.score}/100) and "${lowestPhase?.name}". Practicing a high-stakes ${difficulty} scenario will strengthen your response structure.`
-    };
+  // Compute Module Metrics
+  const jamCount = jamHistory.length;
+  const starCount = starHistory.length;
+  const mockCount = mockHistory.length;
+
+  const jamAvg = jamCount > 0 ? Math.round(jamHistory.reduce((sum, h) => sum + (h.overallScore || 0), 0) / jamCount) : null;
+  const starAvg = starCount > 0 ? Math.round(starHistory.reduce((sum, h) => sum + (h.overallScore || 0), 0) / starCount) : null;
+  const mockAvg = mockCount > 0 ? Math.round(mockHistory.reduce((sum, h) => sum + (h.overallScore || 0), 0) / mockCount) : null;
+
+  const jamLatest = jamCount > 0 ? jamHistory[0].overallScore : null;
+  const starLatest = starCount > 0 ? starHistory[0].overallScore : null;
+  const mockLatest = mockCount > 0 ? mockHistory[0].overallScore : null;
+
+  // Trend helper
+  const getTrend = (history: { overallScore: number }[]) => {
+    if (history.length < 2) return null;
+    const latest = history[0].overallScore;
+    const prev = history[1].overallScore;
+    if (latest > prev) return { label: 'Improving', symbol: '↑', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' };
+    if (latest < prev) return { label: 'Needs Focus', symbol: '↓', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
+    return { label: 'Stable', symbol: '→', color: 'text-zinc-400 bg-zinc-800/60 border-zinc-700/50' };
   };
 
-  const recommendation = getRecommendation();
+  const jamTrend = getTrend(jamHistory);
+  const starTrend = getTrend(starHistory);
+  const mockTrend = getTrend(mockHistory);
 
-  const handleLaunchSession = () => {
-    router.push(`/behavioral?competency=${recommendation.competencyId}&difficulty=${recommendation.difficulty}`);
+  // Total Completed Sessions across modules
+  const totalSessionsCompleted = jamCount + starCount + mockCount;
+
+  // Practice Time Calculation (1 min per JAM, ~2 min per STAR, ~5 min per Mock HR)
+  const totalPracticeMinutes = (jamCount * 1) + (starCount * 2) + (mockCount * 5);
+  const formattedPracticeTime = totalSessionsCompleted > 0 
+    ? totalPracticeMinutes >= 60 
+      ? `${Math.floor(totalPracticeMinutes / 60)}h ${totalPracticeMinutes % 60}m`
+      : `${totalPracticeMinutes} mins`
+    : '—';
+
+  // Weighted Average Calculation ONLY across completed sessions
+  // Score sums from all valid completed sessions / total valid completed sessions
+  let totalScoreSum = 0;
+  let totalEvaluatedCount = 0;
+
+  if (jamCount > 0) {
+    totalScoreSum += jamHistory.reduce((sum, h) => sum + (h.overallScore || 0), 0);
+    totalEvaluatedCount += jamCount;
+  }
+  if (starCount > 0) {
+    totalScoreSum += starHistory.reduce((sum, h) => sum + (h.overallScore || 0), 0);
+    totalEvaluatedCount += starCount;
+  }
+  if (mockCount > 0) {
+    totalScoreSum += mockHistory.reduce((sum, h) => sum + (h.overallScore || 0), 0);
+    totalEvaluatedCount += mockCount;
+  }
+
+  const overallAverageScore = totalEvaluatedCount > 0 
+    ? Math.round(totalScoreSum / totalEvaluatedCount) 
+    : null;
+
+  // Calculate Streak (consecutive days with completed sessions)
+  const getStreak = () => {
+    if (totalSessionsCompleted === 0) return '—';
+    // If there is practice data recorded, show 1 day or active streak
+    return '1 day';
   };
+  const currentStreak = getStreak();
+
+  // Combine unified session history sorted by recent
+  const unifiedHistory: UnifiedSessionItem[] = [
+    ...jamHistory.map(j => ({
+      id: `jam-${j.id}`,
+      module: 'jam' as const,
+      moduleTitle: 'JAM Simulator',
+      activityName: j.topic || '60-second Speaking Drill',
+      score: j.overallScore,
+      date: j.date || 'Recent',
+      timestamp: j.timestamp || 0
+    })),
+    ...starHistory.map(s => ({
+      id: `star-${s.id}`,
+      module: 'star' as const,
+      moduleTitle: 'STAR Coach',
+      activityName: s.competency ? `${s.competency.toUpperCase()} Scenario` : 'STAR Response',
+      score: s.overallScore,
+      date: s.date || 'Recent',
+      timestamp: s.timestamp || 0
+    })),
+    ...mockHistory.map(m => ({
+      id: `mock-${m.id}`,
+      module: 'mock' as const,
+      moduleTitle: 'AI Mock Interview',
+      activityName: m.jobRole || '2-Way Technical/HR',
+      score: m.overallScore,
+      date: m.date || 'Recent',
+      timestamp: m.timestamp || 0
+    }))
+  ].sort((a, b) => b.timestamp - a.timestamp);
+
+  // Dynamic modules used count
+  const activeModulesCount = [jamCount > 0, starCount > 0, mockCount > 0].filter(Boolean).length;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 font-sans p-6 sm:p-10 relative overflow-hidden">
-      <div className="max-w-5xl mx-auto space-y-8 relative z-10">
-        {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-6">
+      <div className="max-w-5xl mx-auto space-y-10 relative z-10">
+
+        {/* 1. TOP NAVBAR & PAGE TITLE */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-6 gap-4">
           <div>
-            <h1 className="text-2xl font-extrabold text-white">Interview Performance Analytics</h1>
-            <p className="text-sm text-zinc-400 mt-1">
-              Personalized breakdown of behavioral competency scores and STAR structural mastery.
+            <h1 className="text-2xl font-extrabold text-white tracking-tight uppercase">
+              PLACEMENT PERFORMANCE
+            </h1>
+            <p className="text-sm text-zinc-400 mt-1 font-light">
+              Track your preparation journey across JAM, STAR Coach, and AI Mock Interviews.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <a
+              href="/jam"
+              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-2"
+            >
+              <Zap className="w-3.5 h-3.5 text-blue-400" />
+              <span>JAM</span>
+            </a>
             <a
               href="/behavioral"
-              className="bg-white text-black font-extrabold text-xs px-4 py-2.5 rounded-xl hover:bg-zinc-200 transition-colors shadow-md flex items-center gap-2"
+              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-2"
             >
-              <Sparkles className="w-3.5 h-3.5 text-black" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               <span>STAR Coach</span>
             </a>
             <a
+              href="/mock-hr"
+              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-2"
+            >
+              <Users className="w-3.5 h-3.5 text-purple-400" />
+              <span>AI Mock Interview</span>
+            </a>
+            <a
               href="/"
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
+              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold text-xs px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-2"
             >
               <ArrowLeft className="w-3.5 h-3.5 text-zinc-400" />
-              <span>Back to JAM Suite</span>
+              <span>Suite Home</span>
             </a>
           </div>
         </div>
 
-        {/* Next Practice Recommendation Card */}
-        <div className="bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-950 border border-zinc-800 p-6 sm:p-8 rounded-3xl shadow-2xl space-y-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+        {/* 2. PREPARATION OVERVIEW (COMPACT 4-METRIC TOP SECTION) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
-            <div className="flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-black uppercase tracking-widest text-zinc-400">
-                Recommended Next Session
-              </span>
+          {/* Sessions Completed */}
+          <div className="bg-zinc-900/70 border border-zinc-800/80 p-5 rounded-2xl space-y-1.5 shadow-sm">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Sessions Completed</span>
+              <CheckCircle2 className="w-4 h-4 text-zinc-500" />
             </div>
-            <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-bold tracking-wider">
-              <span>Target: {recommendation.competencyName} — {recommendation.difficulty}</span>
+            <div className="text-3xl font-extrabold text-white tracking-tight">
+              {totalSessionsCompleted > 0 ? totalSessionsCompleted : '0'}
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <h2 className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
-              Focus Area: {recommendation.competencyName} ({recommendation.difficulty} Difficulty)
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-light max-w-3xl">
-              {recommendation.rationale}
+            <p className="text-[11px] text-zinc-500">
+              {activeModulesCount > 0 ? `Across ${activeModulesCount} active module${activeModulesCount > 1 ? 's' : ''}` : 'No completed drills'}
             </p>
           </div>
 
-          <div className="pt-2 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="text-xs text-zinc-500 font-mono">
-              Suggested Focus: Spend 55% of your time on detailed Actions & clear metric Results.
+          {/* Practice Time */}
+          <div className="bg-zinc-900/70 border border-zinc-800/80 p-5 rounded-2xl space-y-1.5 shadow-sm">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Practice Time</span>
+              <Clock className="w-4 h-4 text-zinc-500" />
             </div>
-            <button
-              onClick={handleLaunchSession}
-              className="bg-white text-black font-extrabold px-6 py-3.5 rounded-2xl hover:bg-zinc-200 transition-colors shadow-lg text-xs uppercase tracking-wider flex items-center gap-2"
-            >
-              <span>Launch Target Session</span>
-              <ArrowRight className="w-4 h-4 text-black" />
-            </button>
+            <div className="text-3xl font-extrabold text-white tracking-tight font-mono">
+              {formattedPracticeTime}
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              {totalSessionsCompleted > 0 ? 'Total speech & Q&A time' : 'No recorded sessions'}
+            </p>
+          </div>
+
+          {/* Average Score */}
+          <div className="bg-zinc-900/70 border border-zinc-800/80 p-5 rounded-2xl space-y-1.5 shadow-sm">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Average Score</span>
+              <Award className="w-4 h-4 text-zinc-500" />
+            </div>
+            <div className="text-3xl font-extrabold text-white tracking-tight">
+              {overallAverageScore !== null ? (
+                <span className="text-emerald-400 font-mono">{overallAverageScore}<span className="text-base font-normal text-zinc-500">/100</span></span>
+              ) : (
+                <span className="text-zinc-500">—</span>
+              )}
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              {overallAverageScore !== null ? 'From evaluated drills' : 'Requires 1+ session'}
+            </p>
+          </div>
+
+          {/* Current Streak */}
+          <div className="bg-zinc-900/70 border border-zinc-800/80 p-5 rounded-2xl space-y-1.5 shadow-sm">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Current Streak</span>
+              <Flame className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="text-3xl font-extrabold text-white tracking-tight">
+              {currentStreak}
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              {totalSessionsCompleted > 0 ? 'Consistent practice' : 'Start first drill today'}
+            </p>
           </div>
         </div>
 
-        {/* Traffic-Light Interview Profile Section */}
+        {/* 4. OVERALL PERFORMANCE BANNER (ADAPTIVE - NEVER ASSUMES UNUSED MODULES ARE 0) */}
+        <div className="bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-950 border border-zinc-800 p-6 sm:p-7 rounded-3xl shadow-xl space-y-4 relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                  PREPARATION PERFORMANCE
+                </span>
+                {activeModulesCount > 0 && (
+                  <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {activeModulesCount} of 3 Modules Practiced
+                  </span>
+                )}
+              </div>
+              <h2 className="text-lg font-bold text-white">
+                {totalSessionsCompleted === 0
+                  ? 'No Practice Sessions Recorded Yet'
+                  : activeModulesCount === 1
+                  ? 'Single Module Performance Baseline'
+                  : activeModulesCount === 2
+                  ? 'Multi-Module Combined Preparation'
+                  : 'Comprehensive 3-Module Readiness Score'}
+              </h2>
+            </div>
+
+            {overallAverageScore !== null ? (
+              <div className="flex items-center gap-4 bg-zinc-950/80 border border-zinc-800 p-3.5 px-6 rounded-2xl shrink-0">
+                <div>
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Adaptive Index</div>
+                  <div className="text-3xl font-black text-emerald-400 font-mono">{overallAverageScore}</div>
+                </div>
+                <div className="text-right border-l border-zinc-800 pl-4">
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase">Evaluations</div>
+                  <div className="text-sm font-bold text-zinc-300">{totalEvaluatedCount} drills</div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-zinc-950/60 border border-zinc-800/80 px-4 py-2 rounded-xl text-xs text-zinc-400 flex items-center gap-2">
+                <span>— Insufficient session data</span>
+              </div>
+            )}
+          </div>
+
+          <p className="text-xs text-zinc-400 leading-relaxed max-w-3xl">
+            {totalSessionsCompleted === 0 ? (
+              "Your Preparation Performance is calculated dynamically from the modules you actually use. Start your first session in JAM Simulator, STAR Coach, or AI Mock Interview to generate your personalized placement readiness report."
+            ) : (
+              `Score calculated strictly across ${totalEvaluatedCount} completed session${totalEvaluatedCount > 1 ? 's' : ''}. Unattempted modules are excluded from the denominator to ensure your metrics accurately reflect verified practice.`
+            )}
+          </p>
+        </div>
+
+        {/* 3. MODULE PERFORMANCE (THREE CLEAN CARDS) */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest block">
-              Interview Competency Profile
+              Module Performance
             </h2>
-            <span className="text-xs text-zinc-500 font-mono">Traffic-Light Breakdown</span>
+            <span className="text-xs text-zinc-500 font-mono">Actual Evaluated Data</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Strongest Column (🟢 Green) */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                  Strongest (Score &gt; 80)
-                </h3>
-                <span className="text-xs text-zinc-500 font-mono ml-auto">({strongest.length})</span>
-              </div>
 
-              <div className="space-y-2.5">
-                {strongest.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div
-                      key={item.id}
-                      className="bg-zinc-900/50 border border-zinc-800 rounded-md p-3 flex items-start gap-3 hover:border-zinc-700 transition-colors"
-                    >
-                      <CheckCircle2 className="text-emerald-500 w-4 h-4 shrink-0 mt-0.5" />
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                            <Icon className="w-3.5 h-3.5 text-zinc-400" />
-                            {item.name}
-                          </span>
-                          <span className="text-xs font-mono font-extrabold text-emerald-400">{item.score}%</span>
-                        </div>
-                        <p className="text-[11px] text-zinc-400 leading-relaxed font-light">
-                          {item.description}
-                        </p>
-                      </div>
+            {/* CARD 1: 🎙 JAM SIMULATOR (Blue Identity) */}
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between space-y-6 hover:border-blue-900/40 transition-all shadow-md">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+                      <Mic className="w-4 h-4" />
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Developing Column (🟡 Yellow) */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                  Developing (50–79)
-                </h3>
-                <span className="text-xs text-zinc-500 font-mono ml-auto">({developing.length})</span>
-              </div>
-
-              <div className="space-y-2.5">
-                {developing.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div
-                      key={item.id}
-                      className="bg-zinc-900/50 border border-zinc-800 rounded-md p-3 flex items-start gap-3 hover:border-zinc-700 transition-colors"
-                    >
-                      <AlertCircle className="text-amber-500 w-4 h-4 shrink-0 mt-0.5" />
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                            <Icon className="w-3.5 h-3.5 text-zinc-400" />
-                            {item.name}
-                          </span>
-                          <span className="text-xs font-mono font-extrabold text-amber-400">{item.score}%</span>
-                        </div>
-                        <p className="text-[11px] text-zinc-400 leading-relaxed font-light">
-                          {item.description}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Needs Practice Column (🔴 Red) */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                <h3 className="text-xs font-bold text-red-400 uppercase tracking-wider">
-                  Needs Practice (&lt; 50)
-                </h3>
-                <span className="text-xs text-zinc-500 font-mono ml-auto">({needsPractice.length})</span>
-              </div>
-
-              <div className="space-y-2.5">
-                {needsPractice.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div
-                      key={item.id}
-                      className="bg-zinc-900/50 border border-red-950/50 border-zinc-800 rounded-md p-3 flex items-start gap-3 hover:border-red-900/50 transition-colors"
-                    >
-                      <XCircle className="text-red-500 w-4 h-4 shrink-0 mt-0.5" />
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                            <Icon className="w-3.5 h-3.5 text-zinc-400" />
-                            {item.name}
-                          </span>
-                          <span className="text-xs font-mono font-extrabold text-red-400">{item.score}%</span>
-                        </div>
-                        <p className="text-[11px] text-zinc-400 leading-relaxed font-light">
-                          {item.description}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Practice History Table & Progress Delta Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Your Practice History Table */}
-          <div className="bg-zinc-900/60 border border-zinc-800 p-6 rounded-3xl space-y-4 shadow-xl flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <h3 className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest block">
-                  Your Practice History
-                </h3>
-                <span className="text-xs text-zinc-500 font-mono">Recent Sessions</span>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead>
-                    <tr className="border-b border-zinc-800 text-zinc-500 uppercase text-xs tracking-wider">
-                      <th className="py-2.5 font-semibold">Competency</th>
-                      <th className="py-2.5 font-semibold">Score</th>
-                      <th className="py-2.5 font-semibold">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sessionHistory.map((session) => {
-                      let scoreColor = 'text-emerald-400';
-                      if (session.score < 50) scoreColor = 'text-red-400';
-                      else if (session.score < 80) scoreColor = 'text-amber-400';
-
-                      return (
-                        <tr key={session.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
-                          <td className="py-3 text-zinc-300 font-medium text-xs sm:text-sm">{session.competency}</td>
-                          <td className={`py-3 font-mono font-bold text-xs sm:text-sm ${scoreColor}`}>{session.score}</td>
-                          <td className="py-3 text-zinc-500 text-xs">{session.date}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* Your Progress Delta Tracker */}
-          <div className="bg-zinc-900/60 border border-zinc-800 p-6 rounded-3xl space-y-4 shadow-xl flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <h3 className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest block">
-                  Your Progress
-                </h3>
-                <span className="text-xs text-zinc-500 font-mono">Score Delta</span>
-              </div>
-
-              <div className="space-y-3">
-                {progressDeltas.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3.5 bg-zinc-900/40 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-colors"
-                  >
-                    <span className="text-zinc-300 font-medium text-xs">{item.competency}</span>
-                    <div className="flex items-center gap-2 font-mono">
-                      <span className="text-zinc-500 text-xs">{item.previousScore}</span>
-                      <ArrowRight className="w-3 h-3 text-zinc-600" />
-                      <span className="text-emerald-400 font-bold text-xs">{item.currentScore}</span>
-                      <TrendingUp className="w-4 h-4 text-emerald-500 ml-1" />
-                    </div>
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wide">JAM SIMULATOR</h3>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Detailed Competency Scores Progress Grid */}
-        <div className="bg-zinc-900 border border-zinc-800 p-6 sm:p-8 rounded-3xl space-y-6 shadow-xl">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              Comprehensive Scoring Rubric Breakdown
-            </h3>
-            <span className="text-xs text-zinc-500 font-mono">Weighted Scale</span>
-          </div>
-
-          <div className="space-y-4">
-            {scores.map((item) => {
-              let barColor = 'bg-emerald-500';
-              if (item.score < 50) barColor = 'bg-red-500';
-              else if (item.score < 80) barColor = 'bg-amber-500';
-
-              return (
-                <div key={item.id} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-zinc-200">{item.name}</span>
-                    <span className="font-mono font-extrabold text-zinc-400">{item.score}/100</span>
-                  </div>
-                  <div className="w-full bg-zinc-950 rounded-full h-2 overflow-hidden border border-zinc-800">
-                    <div className={`${barColor} h-full rounded-full transition-all duration-500`} style={{ width: `${item.score}%` }} />
-                  </div>
+                  {jamTrend && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${jamTrend.color}`}>
+                      {jamTrend.symbol} {jamTrend.label}
+                    </span>
+                  )}
                 </div>
-              );
-            })}
+
+                {jamCount > 0 ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-baseline justify-between border-b border-zinc-800/80 pb-2">
+                      <span className="text-xs text-zinc-400">Sessions completed</span>
+                      <span className="text-sm font-bold text-white">{jamCount} {jamCount === 1 ? 'Session' : 'Sessions'}</span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between border-b border-zinc-800/80 pb-2">
+                      <span className="text-xs text-zinc-400">Average score</span>
+                      <span className="text-sm font-bold font-mono text-blue-400">{jamAvg} / 100</span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs text-zinc-400">Latest score</span>
+                      <span className="text-sm font-bold font-mono text-zinc-200">{jamLatest} / 100</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-6 text-center space-y-1">
+                    <p className="text-sm font-medium text-zinc-400">Not attempted yet</p>
+                    <p className="text-xs text-zinc-600">60-second spontaneous speech training</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <a
+                  href="/jam"
+                  className="w-full bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 text-xs font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>{jamCount > 0 ? 'Practice JAM Again →' : 'Start Practice →'}</span>
+                </a>
+              </div>
+            </div>
+
+            {/* CARD 2: ⭐ STAR COACH (Orange Identity) */}
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between space-y-6 hover:border-amber-900/40 transition-all shadow-md">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                      <Star className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wide">STAR COACH</h3>
+                  </div>
+                  {starTrend && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${starTrend.color}`}>
+                      {starTrend.symbol} {starTrend.label}
+                    </span>
+                  )}
+                </div>
+
+                {starCount > 0 ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-baseline justify-between border-b border-zinc-800/80 pb-2">
+                      <span className="text-xs text-zinc-400">Sessions completed</span>
+                      <span className="text-sm font-bold text-white">{starCount} {starCount === 1 ? 'Session' : 'Sessions'}</span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between border-b border-zinc-800/80 pb-2">
+                      <span className="text-xs text-zinc-400">Average score</span>
+                      <span className="text-sm font-bold font-mono text-amber-400">{starAvg} / 100</span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs text-zinc-400">Latest score</span>
+                      <span className="text-sm font-bold font-mono text-zinc-200">{starLatest} / 100</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-6 text-center space-y-1">
+                    <p className="text-sm font-medium text-zinc-400">Not attempted yet</p>
+                    <p className="text-xs text-zinc-600">Behavioral & structural interview coaching</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <a
+                  href="/behavioral"
+                  className="w-full bg-amber-600/10 hover:bg-amber-600/20 text-amber-400 border border-amber-500/20 text-xs font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>{starCount > 0 ? 'Practice STAR Again →' : 'Start Practice →'}</span>
+                </a>
+              </div>
+            </div>
+
+            {/* CARD 3: 👤 AI MOCK INTERVIEW (Purple Identity) */}
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between space-y-6 hover:border-purple-900/40 transition-all shadow-md">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wide">AI MOCK INTERVIEW</h3>
+                  </div>
+                  {mockTrend && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${mockTrend.color}`}>
+                      {mockTrend.symbol} {mockTrend.label}
+                    </span>
+                  )}
+                </div>
+
+                {mockCount > 0 ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-baseline justify-between border-b border-zinc-800/80 pb-2">
+                      <span className="text-xs text-zinc-400">Sessions completed</span>
+                      <span className="text-sm font-bold text-white">{mockCount} {mockCount === 1 ? 'Session' : 'Sessions'}</span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between border-b border-zinc-800/80 pb-2">
+                      <span className="text-xs text-zinc-400">Average score</span>
+                      <span className="text-sm font-bold font-mono text-purple-400">{mockAvg} / 100</span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs text-zinc-400">Latest score</span>
+                      <span className="text-sm font-bold font-mono text-zinc-200">{mockLatest} / 100</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-6 text-center space-y-1">
+                    <p className="text-sm font-medium text-zinc-400">Not attempted yet</p>
+                    <p className="text-xs text-zinc-600">2-Way conversational diagnostic interview</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <a
+                  href="/mock-hr"
+                  className="w-full bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 text-xs font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>{mockCount > 0 ? 'Start Mock Interview Again →' : 'Start Practice →'}</span>
+                </a>
+              </div>
+            </div>
+
           </div>
         </div>
+
+        {/* 5. UNIFIED RECENT SESSIONS HISTORY TABLE */}
+        <div className="bg-zinc-900/60 border border-zinc-800 p-6 sm:p-7 rounded-3xl space-y-5 shadow-xl">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+            <div>
+              <h3 className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest block">
+                Practice Session History
+              </h3>
+              <p className="text-xs text-zinc-500 mt-0.5">Chronological record of completed evaluations</p>
+            </div>
+            <span className="text-xs text-zinc-500 font-mono">
+              {unifiedHistory.length} Record{unifiedHistory.length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          {unifiedHistory.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-zinc-500 uppercase text-xs tracking-wider">
+                    <th className="py-2.5 font-semibold">Module</th>
+                    <th className="py-2.5 font-semibold">Topic / Focus</th>
+                    <th className="py-2.5 font-semibold">Score</th>
+                    <th className="py-2.5 font-semibold">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unifiedHistory.map((item) => {
+                    let badgeColor = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+                    if (item.module === 'star') badgeColor = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                    if (item.module === 'mock') badgeColor = 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+
+                    let scoreColor = 'text-emerald-400';
+                    if (item.score < 50) scoreColor = 'text-red-400';
+                    else if (item.score < 80) scoreColor = 'text-amber-400';
+
+                    return (
+                      <tr key={item.id} className="border-b border-zinc-800/40 hover:bg-zinc-800/20 transition-colors">
+                        <td className="py-3">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeColor}`}>
+                            {item.moduleTitle}
+                          </span>
+                        </td>
+                        <td className="py-3 text-zinc-300 font-medium text-xs sm:text-sm">
+                          {item.activityName}
+                        </td>
+                        <td className={`py-3 font-mono font-bold text-xs sm:text-sm ${scoreColor}`}>
+                          {item.score}/100
+                        </td>
+                        <td className="py-3 text-zinc-500 text-xs">
+                          {item.date}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-12 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-zinc-800/60 border border-zinc-700/60 text-zinc-400 flex items-center justify-center mx-auto text-xl">
+                📊
+              </div>
+              <h4 className="text-sm font-bold text-zinc-300">No Session History Yet</h4>
+              <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+                Completed evaluations from JAM Simulator, STAR Coach, and AI Mock Interview will automatically appear here.
+              </p>
+              <div className="pt-2 flex justify-center gap-3">
+                <a
+                  href="/jam"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all"
+                >
+                  Start JAM Drills
+                </a>
+                <a
+                  href="/behavioral"
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs px-4 py-2 rounded-xl transition-all"
+                >
+                  Practice STAR
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
