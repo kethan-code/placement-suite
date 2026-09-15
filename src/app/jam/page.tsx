@@ -7,6 +7,14 @@ import { getScoreTheme } from '@/lib/scoreTheme';
 import VoiceVisualizer from '@/components/VoiceVisualizer';
 import { getGeminiApiKey, setGeminiApiKey, removeGeminiApiKey } from '@/lib/geminiKey';
 import { recordMasterDeckScore } from '@/lib/masterDeckManager';
+import {
+  generateDynamicJamChallenge,
+  addRecentJamQuestion,
+  persistActiveJamChallenge,
+  getPersistedActiveJamChallenge,
+  JAM_SELECTED_TRACK_STORAGE_KEY,
+  JAM_SELECTED_DIFF_STORAGE_KEY
+} from '@/lib/jamChallengeGenerator';
 import { 
   Mic, 
   Square, 
@@ -32,7 +40,8 @@ import {
   FileText,
   Check,
   ChevronRight,
-  Zap
+  Zap,
+  AlertTriangle
 } from 'lucide-react';
 
 interface ScoreRecord {
@@ -91,6 +100,7 @@ export default function JamSimulatorPage() {
   const [activeTab, setActiveTab] = useState<'practice' | 'analytics'>('practice');
   const [topic, setTopic] = useState('');
   const [topicDetails, setTopicDetails] = useState<{ track: string; difficulty: string; hint?: string } | null>(null);
+  const [isGeneratingAnother, setIsGeneratingAnother] = useState(false);
   const [todayIndex, setTodayIndex] = useState(0);
 
   const [isRecording, setIsRecording] = useState(false);
@@ -104,6 +114,7 @@ export default function JamSimulatorPage() {
   const [audioLevel, setAudioLevel] = useState(0);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [showSilenceWarning, setShowSilenceWarning] = useState(false);
 
   const recognitionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -111,11 +122,20 @@ export default function JamSimulatorPage() {
   const animFrameRef = useRef<number | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const isRecordingRef = useRef(false);
+  const transcriptRef = useRef('');
+  const interimTextRef = useRef('');
 
   useEffect(() => {
     setIsMounted(true);
     const key = getGeminiApiKey();
     if (key) setApiKey(key);
+
+    // Restore persisted active challenge across page refreshes
+    const persisted = getPersistedActiveJamChallenge();
+    if (persisted && persisted.topic) {
+      setTopic(persisted.topic);
+      setTopicDetails(persisted.details);
+    }
 
     const storedHistory = localStorage.getItem('app_score_history');
     if (storedHistory) {
@@ -139,6 +159,78 @@ export default function JamSimulatorPage() {
       }
     };
   }, []);
+
+  const updateActiveChallenge = (
+    newTopic: string,
+    newDetails: { track: string; difficulty: string; hint?: string } | null
+  ) => {
+    setTopic(newTopic);
+    setTopicDetails(newDetails);
+    persistActiveJamChallenge(newTopic, newDetails as any);
+    if (newTopic) {
+      addRecentJamQuestion(newTopic);
+      if (newDetails?.track) {
+        sessionStorage.setItem(JAM_SELECTED_TRACK_STORAGE_KEY, newDetails.track);
+      }
+      if (newDetails?.difficulty) {
+        sessionStorage.setItem(JAM_SELECTED_DIFF_STORAGE_KEY, newDetails.difficulty);
+      }
+    }
+  };
+
+  const handleTryAnother = async () => {
+    if (isGeneratingAnother) return; // Prevent duplicate requests / race conditions
+
+    // 1. Reset any ongoing recording / audio / speech recognition immediately
+    if (isRecordingRef.current || isRecording) {
+      isRecordingRef.current = false;
+      setIsRecording(false);
+      stopAudio();
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+    }
+
+    // 2. Reset timer and all session/interview state for the challenge
+    setTimeLeft(60);
+    setTranscript('');
+    setInterimText('');
+    setIsReviewing(false);
+    setIsEvaluating(false);
+    setAnalysis(null);
+
+    // 3. Preserve current track and difficulty
+    const currentTrack = topicDetails?.track || 'Campus';
+    const currentDifficulty = (topicDetails?.difficulty as 'Easy' | 'Medium' | 'Hard') || 'Medium';
+
+    setIsGeneratingAnother(true);
+
+    try {
+      // Brief loading window so the transition is visibly smooth and responsive
+      const [newChallenge] = await Promise.all([
+        generateDynamicJamChallenge({
+          track: currentTrack,
+          difficulty: currentDifficulty,
+          apiKey
+        }),
+        new Promise((resolve) => setTimeout(resolve, 600))
+      ]);
+
+      if (newChallenge && newChallenge.topic) {
+        updateActiveChallenge(newChallenge.topic, {
+          track: currentTrack,
+          difficulty: currentDifficulty,
+          hint: newChallenge.hint
+        });
+      }
+    } catch (err) {
+      console.error("Failed to generate another challenge:", err);
+    } finally {
+      setIsGeneratingAnother(false);
+    }
+  };
 
   const handleKeySetup = (provider: 'gemini', key: string) => {
     setGeminiApiKey(key);
@@ -213,11 +305,14 @@ export default function JamSimulatorPage() {
 
     setTranscript('');
     setInterimText('');
+    transcriptRef.current = '';
+    interimTextRef.current = '';
     setTimeLeft(60);
     setIsRecording(true);
     isRecordingRef.current = true;
     setAnalysis(null);
     setIsReviewing(false);
+    setShowSilenceWarning(false);
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
@@ -237,8 +332,10 @@ export default function JamSimulatorPage() {
       }
 
       if (finalTranscript) {
+        transcriptRef.current += finalTranscript;
         setTranscript((prev) => prev + finalTranscript);
       }
+      interimTextRef.current = interimTranscript;
       setInterimText(interimTranscript);
     };
 
@@ -274,14 +371,25 @@ export default function JamSimulatorPage() {
         recognitionRef.current.stop();
       } catch (e) {}
     }
-    setTranscript((prev) => (prev + (interimText ? ' ' + interimText : '')).trim());
+    const finalTranscript = (transcriptRef.current + (interimTextRef.current ? ' ' + interimTextRef.current : '')).trim() || (transcript + (interimText ? ' ' + interimText : '')).trim();
+    setTranscript(finalTranscript);
     setInterimText('');
+    transcriptRef.current = finalTranscript;
+    interimTextRef.current = '';
+
+    // Check if the transcript is empty or just spaces
+    if (finalTranscript.length === 0) {
+      setShowSilenceWarning(true);
+      setIsReviewing(false);
+      return; // Stop the function here, DON'T proceed to review or AI
+    }
+
     setIsReviewing(true);
   };
 
   const submitForEvaluation = async () => {
     if (!transcript.trim()) {
-      alert("No transcript found. Please record again or type your response.");
+      setShowSilenceWarning(true);
       setIsReviewing(false);
       return;
     }
@@ -334,10 +442,9 @@ export default function JamSimulatorPage() {
   };
 
   const handleRetryLastJam = (item: ScoreRecord) => {
-    setTopic(item.topic);
-    setTopicDetails({
+    updateActiveChallenge(item.topic, {
       track: item.category || 'Campus',
-      difficulty: item.difficulty || 'Medium',
+      difficulty: (item.difficulty as any) || 'Medium',
       hint: "Practice this topic again to beat your previous score. Structure your argument clearly."
     });
     setTimeLeft(60);
@@ -373,7 +480,7 @@ export default function JamSimulatorPage() {
   const currentTodayChallenge = TODAYS_JAM_POOL[todayIndex];
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans pb-8 relative overflow-hidden flex flex-col justify-between">
+    <div className="min-h-screen bg-white text-slate-900 font-sans relative w-full flex flex-col">
       {/* API Setup Modal if user wants to change key */}
       {showSetupModal && (
         <ApiOnboarding
@@ -386,21 +493,22 @@ export default function JamSimulatorPage() {
         />
       )}
 
-      {/* TOP NAVBAR (Matching STAR Coach and Placement Suite) */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-2xs">
-        <div className="max-w-[1240px] mx-auto px-4 sm:px-8 lg:px-12 h-16 flex items-center justify-between">
-          <div className="flex items-center">
+      {/* TOP NAVBAR (Normal document flow matching STAR Coach) */}
+      <nav className="relative w-full bg-white border-b border-slate-200 z-20 shadow-2xs">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-8 lg:px-12 h-14 sm:h-16 flex items-center justify-between gap-2">
+          <div className="flex items-center shrink-0">
             <Link href="/" className="flex items-center group focus:outline-none">
-              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 text-white shadow-sm mr-2.5 group-hover:scale-105 transition-transform">
-                <Mic className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-600 text-white shadow-sm mr-2 sm:mr-2.5 group-hover:scale-105 transition-transform">
+                <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div className="flex items-center">
-                <span className="font-extrabold text-slate-900 text-lg tracking-tight">Placement Suite</span>
+                <span className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight whitespace-nowrap">Placement Suite</span>
               </div>
             </Link>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          {/* Desktop Navigation Links */}
+          <div className="hidden md:flex items-center gap-1.5 sm:gap-2">
             <button 
               onClick={() => setActiveTab('practice')} 
               className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
@@ -475,93 +583,110 @@ export default function JamSimulatorPage() {
               </button>
             )}
           </div>
+
+          {/* Mobile Navigation Bar */}
+          <div className="flex md:hidden items-center gap-2 shrink-0">
+            <button
+              onClick={() => setActiveTab(activeTab === 'practice' ? 'analytics' : 'practice')}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200/80 cursor-pointer"
+            >
+              {activeTab === 'practice' ? 'Analytics' : 'JAM Arena'}
+            </button>
+            <Link
+              href="/"
+              className="p-2 rounded-lg text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center gap-1 text-xs font-medium"
+              title="Return to Suite Home"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden xs:inline">Home</span>
+            </Link>
+          </div>
         </div>
       </nav>
 
-      <main className="max-w-[1240px] w-full mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-8 lg:py-10 relative z-10 flex-1 space-y-8 sm:space-y-10 lg:space-y-12">
+      <main className="w-full max-w-[1240px] mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-8 lg:py-10 relative z-10 flex-1 space-y-6 sm:space-y-10 lg:space-y-12">
         {activeTab === 'practice' && (
-          <div className="space-y-8 sm:space-y-10 lg:space-y-12 animate-fade-in">
+          <div className="space-y-6 sm:space-y-10 lg:space-y-12 animate-fade-in">
             {/* MAIN VIEWPORT FLOW */}
             {!isRecording && !isReviewing && !isEvaluating && !analysis && (
-              <div className="space-y-8 sm:space-y-10 lg:space-y-12">
+              <div className="space-y-6 sm:space-y-10 lg:space-y-12">
                 {/* 1. HERO / JAM INTRO */}
-                <div className="border-b border-slate-200/80 pb-6 sm:pb-8">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+                <div className="border-b border-slate-200/80 pb-4 sm:pb-8">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 sm:gap-6">
                     <div>
-                      <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200/80 text-blue-700 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2 shadow-2xs">
-                        <Zap className="w-3.5 h-3.5 text-blue-600" />
+                      <div className="inline-flex items-center gap-1.5 sm:gap-2 bg-blue-50 border border-blue-200/80 text-blue-700 text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1 rounded-full uppercase tracking-wider mb-1.5 sm:mb-2 shadow-2xs">
+                        <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600" />
                         <span>JAM ARENA • 60-SECOND SIMULATOR</span>
                       </div>
-                      <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+                      <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
                         READY. SET. JAM.
                       </h1>
-                      <p className="text-sm sm:text-base text-slate-600 mt-1 font-medium max-w-2xl">
+                      <p className="text-xs sm:text-base text-slate-600 mt-1 font-medium max-w-2xl">
                         Practice thinking on your feet with realistic campus placement challenges.
                       </p>
                     </div>
 
                     {/* MINI HOW JAM WORKS STRIP */}
-                    <div className="bg-slate-50/90 border border-slate-200/80 rounded-2xl px-4 py-2.5 flex items-center gap-3 sm:gap-4 shrink-0 shadow-2xs">
-                      <div className="text-center">
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-600 block">① Pick</span>
-                        <span className="text-xs font-semibold text-slate-800">Challenge</span>
+                    <div className="bg-slate-50/90 border border-slate-200/80 rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between sm:justify-start gap-2 sm:gap-4 shrink-0 shadow-2xs w-full sm:w-auto overflow-hidden">
+                      <div className="text-center flex-1 sm:flex-initial">
+                        <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-blue-600 block">① Pick</span>
+                        <span className="text-[11px] sm:text-xs font-semibold text-slate-800">Challenge</span>
                       </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                      <div className="text-center">
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-600 block">② JAM</span>
-                        <span className="text-xs font-semibold text-slate-800">60s Clock</span>
+                      <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-300 shrink-0" />
+                      <div className="text-center flex-1 sm:flex-initial">
+                        <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-amber-600 block">② JAM</span>
+                        <span className="text-[11px] sm:text-xs font-semibold text-slate-800">60s Clock</span>
                       </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                      <div className="text-center">
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-600 block">③ Improve</span>
-                        <span className="text-xs font-semibold text-slate-800">Feedback</span>
+                      <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-300 shrink-0" />
+                      <div className="text-center flex-1 sm:flex-initial">
+                        <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-emerald-600 block">③ Improve</span>
+                        <span className="text-[11px] sm:text-xs font-semibold text-slate-800">Feedback</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* 2. TODAY'S JAM - WIDE LIGHTWEIGHT CHALLENGE BANNER */}
-                <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-white border border-blue-200/80 rounded-3xl p-5 sm:p-7 shadow-xs hover:border-blue-300 transition-all">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-extrabold bg-blue-600 text-white px-2.5 py-1 rounded-full uppercase tracking-wider shadow-2xs">
-                          <Flame className="w-3.5 h-3.5 fill-white" />
+                <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-white border border-blue-200/80 rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-xs hover:border-blue-300 transition-all w-full overflow-hidden">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-5">
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap text-[11px] sm:text-xs">
+                        <span className="inline-flex items-center gap-1 font-extrabold bg-blue-600 text-white px-2.5 py-0.5 sm:py-1 rounded-full uppercase tracking-wider shadow-2xs">
+                          <Flame className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-white" />
                           TODAY&apos;S JAM
                         </span>
-                        <span className="text-xs font-bold text-blue-900 bg-blue-100/70 border border-blue-200/60 px-2.5 py-0.5 rounded-full uppercase">
+                        <span className="font-bold text-blue-900 bg-blue-100/70 border border-blue-200/60 px-2.5 py-0.5 rounded-full uppercase">
                           {currentTodayChallenge.category}
                         </span>
                         <span className="text-slate-300">•</span>
-                        <span className="text-xs font-mono font-bold text-slate-600">
+                        <span className="font-mono font-bold text-slate-600">
                           {currentTodayChallenge.difficulty} DIFFICULTY
                         </span>
                         <span className="text-slate-300">•</span>
-                        <span className="text-xs font-mono text-blue-700 font-bold">
+                        <span className="font-mono text-blue-700 font-bold">
                           {currentTodayChallenge.time}
                         </span>
                       </div>
 
-                      <h2 className="text-base sm:text-lg lg:text-xl font-black text-slate-900 leading-snug">
+                      <h2 className="text-base sm:text-lg lg:text-xl font-black text-slate-900 leading-snug break-words">
                         &ldquo;{currentTodayChallenge.topic}&rdquo;
                       </h2>
-                      <p className="text-xs sm:text-sm text-slate-600 font-medium">
+                      <p className="text-xs sm:text-sm text-slate-600 font-medium break-words">
                         Take a clear stance in the first 10 seconds. Support your viewpoint with practical real-world points.
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 shrink-0 w-full sm:w-auto">
                       <button
                         type="button"
                         onClick={() => {
-                          setTopic(currentTodayChallenge.topic);
-                          setTopicDetails({
+                          updateActiveChallenge(currentTodayChallenge.topic, {
                             track: currentTodayChallenge.category,
-                            difficulty: currentTodayChallenge.difficulty,
+                            difficulty: currentTodayChallenge.difficulty as any,
                             hint: "Take a clear stance in the first 10 seconds. Substantiate with 2 practical arguments."
                           });
                         }}
-                        className="bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-sm py-3 px-5 rounded-2xl transition-all shadow-sm shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-2"
+                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-sm py-3 px-5 rounded-xl sm:rounded-2xl transition-all shadow-sm shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-2"
                       >
                         <Mic className="w-4 h-4" />
                         <span>Start This Challenge</span>
@@ -570,9 +695,10 @@ export default function JamSimulatorPage() {
                         type="button"
                         onClick={() => setTodayIndex((prev) => (prev + 1) % TODAYS_JAM_POOL.length)}
                         title="Shuffle next daily topic"
-                        className="p-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-2xl transition-all shadow-2xs cursor-pointer"
+                        className="w-full sm:w-auto py-2.5 px-3 sm:p-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl sm:rounded-2xl transition-all shadow-2xs cursor-pointer flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold sm:font-normal"
                       >
-                        <Shuffle className="w-4 h-4" />
+                        <Shuffle className="w-4 h-4 text-slate-500" />
+                        <span className="sm:hidden">Shuffle Topic</span>
                       </button>
                     </div>
                   </div>
@@ -580,58 +706,77 @@ export default function JamSimulatorPage() {
 
                 {/* ACTIVE SPOTLIGHT: ⚡ YOUR ACTIVE JAM (When a topic has been selected) */}
                 {topic && (
-                  <div className="bg-slate-900 text-white rounded-3xl p-5 sm:p-7 shadow-md relative overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="bg-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-md relative overflow-hidden w-full animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
                     
-                    <div className="relative z-10 space-y-3">
+                    <div className="relative z-10 space-y-3 sm:space-y-3.5">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-extrabold bg-blue-500 text-white px-2.5 py-1 rounded-full uppercase tracking-wider">
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap text-[10px] sm:text-xs">
+                          <span className="font-extrabold bg-blue-500 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                             ⚡ ACTIVE JAM TOPIC
                           </span>
-                          <span className="text-xs font-bold text-blue-300 uppercase tracking-wide">
+                          <span className="font-bold text-blue-300 uppercase tracking-wide">
                             {topicDetails?.track || 'CAMPUS'}
                           </span>
                           <span className="text-slate-600">•</span>
-                          <span className="text-xs font-mono text-slate-300">
+                          <span className="font-mono text-slate-300">
                             {topicDetails?.difficulty || 'MEDIUM'} DIFFICULTY
                           </span>
                         </div>
-                        <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                        <span className="text-[11px] sm:text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full shrink-0">
                           60 SECONDS
                         </span>
                       </div>
 
-                      <h3 className="text-base sm:text-lg lg:text-xl font-black text-white leading-snug">
+                      <h3 className="text-base sm:text-lg lg:text-xl font-black text-white leading-snug break-words">
                         &ldquo;{topic}&rdquo;
                       </h3>
 
                       {topicDetails?.hint && (
-                        <div className="flex items-start gap-2 text-xs sm:text-sm text-slate-300 bg-white/5 border border-white/10 rounded-2xl p-3 sm:p-3.5">
+                        <div className="flex items-start gap-2 text-xs sm:text-sm text-slate-300 bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 break-words">
                           <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                          <span><strong className="text-white">Structure Tip:</strong> {topicDetails.hint}</span>
+                          <span className="leading-relaxed"><strong className="text-white">Structure Tip:</strong> {topicDetails.hint}</span>
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2.5 pt-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1 w-full">
                         <button
                           type="button"
                           onClick={() => startRecording()}
-                          className="bg-blue-500 hover:bg-blue-400 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-2"
+                          className="w-full sm:w-auto bg-blue-500 hover:bg-blue-400 active:scale-[0.99] text-white font-extrabold text-sm py-3 px-5 rounded-xl transition-all shadow-xs cursor-pointer flex items-center justify-center gap-2"
                         >
                           <Mic className="w-4 h-4" />
                           <span>Start JAM Now</span>
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            setTopic('');
-                            setTopicDetails(null);
-                          }}
-                          className="bg-white/10 hover:bg-white/15 text-slate-300 hover:text-white font-semibold text-xs sm:text-sm py-2.5 px-3.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 border border-white/10"
+                          onClick={handleTryAnother}
+                          disabled={isGeneratingAnother}
+                          className="w-full sm:w-auto bg-white/10 hover:bg-white/15 active:scale-[0.99] disabled:opacity-60 text-slate-200 hover:text-white font-semibold text-sm py-3 px-4 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-white/10"
+                          title="Generate a brand new challenge for this track & difficulty"
                         >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Pick Another</span>
+                          {isGeneratingAnother ? (
+                            <>
+                              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                              <span>Generating another challenge...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Shuffle className="w-3.5 h-3.5 text-blue-400" />
+                              <span>Try Another</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateActiveChallenge('', null);
+                          }}
+                          className="text-slate-400 hover:text-slate-200 text-xs font-medium py-2 sm:py-1.5 px-2 rounded transition-colors sm:ml-auto flex items-center justify-center gap-1 cursor-pointer"
+                          title="Return to challenge track and mode selection"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span>Exit to Setup</span>
                         </button>
                       </div>
                     </div>
@@ -641,13 +786,16 @@ export default function JamSimulatorPage() {
                 {/* 3. PRACTICE AREA: CONTROLS | TIMER */}
                 {/* On desktop: 7 cols practice controls | 5 cols timer */}
                 {/* On mobile: naturally stacked */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
                   {/* LEFT 7 COLS: JamTopicSelector */}
-                  <div className="lg:col-span-7">
+                  <div className="lg:col-span-7 w-full">
                     <JamTopicSelector 
                       onTopicSelect={(t, details) => {
-                        setTopic(t);
-                        setTopicDetails(details || null);
+                        updateActiveChallenge(t, details ? {
+                          track: details.track,
+                          difficulty: details.difficulty as any,
+                          hint: details.hint
+                        } : null);
                       }} 
                       apiKey={apiKey} 
                       selectedTopic={topic} 
@@ -655,8 +803,8 @@ export default function JamSimulatorPage() {
                   </div>
 
                   {/* RIGHT 5 COLS: Prominent Timer Card */}
-                  <div className="lg:col-span-5 lg:sticky lg:top-24">
-                    <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-between text-center space-y-6 shadow-xs">
+                  <div className="lg:col-span-5 lg:sticky lg:top-24 w-full">
+                    <div className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col items-center justify-between text-center space-y-5 sm:space-y-6 shadow-xs w-full overflow-hidden">
                       <div>
                         <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block mb-1">
                           JAM ARENA CLOCK
@@ -670,7 +818,7 @@ export default function JamSimulatorPage() {
                       </div>
 
                       {/* Circular Progress Ring */}
-                      <div className="relative w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center">
+                      <div className="relative w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center">
                         <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 120 120">
                           <circle
                             cx="60"
@@ -694,7 +842,7 @@ export default function JamSimulatorPage() {
                         </svg>
 
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-5xl font-mono font-black text-slate-900 tracking-tight">
+                          <span className="text-4xl sm:text-5xl font-mono font-black text-slate-900 tracking-tight">
                             01:00
                           </span>
                           <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mt-1">
@@ -730,9 +878,8 @@ export default function JamSimulatorPage() {
                 </div>
 
                 {/* 4. PERFORMANCE SNAPSHOT & RECENT ATTEMPTS */}
-                {/* Clean whitespace separation: Clear distinction between "Practice now" vs "My previous progress" */}
-                <div className="pt-4 sm:pt-6 border-t border-slate-200/80 space-y-6">
-                  <div className="flex items-center justify-between">
+                <div className="pt-4 sm:pt-6 border-t border-slate-200/80 space-y-5 sm:space-y-6">
+                  <div className="flex items-center justify-between gap-2">
                     <div>
                       <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block mb-0.5">
                         ACTIVITY &amp; STATS
@@ -743,18 +890,18 @@ export default function JamSimulatorPage() {
                     </div>
                     <button
                       onClick={() => setActiveTab('analytics')}
-                      className="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
                       <span>Full Analytics</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
                     {/* LEFT 7 COLS: YOUR JAM PROGRESS */}
-                    <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-xs space-y-5">
+                    <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-xs space-y-4 sm:space-y-5 w-full overflow-hidden">
                       <div className="border-b border-slate-100 pb-3">
-                        <h4 className="text-sm font-black text-slate-900 tracking-tight uppercase">
+                        <h4 className="text-xs sm:text-sm font-black text-slate-900 tracking-tight uppercase">
                           Placement Readiness Snapshot
                         </h4>
                         <p className="text-xs text-slate-500 font-normal mt-0.5">
@@ -762,18 +909,18 @@ export default function JamSimulatorPage() {
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-3 text-center border-b border-slate-100 pb-4">
-                        <div className="p-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">JAMs Completed</span>
-                          <span className="text-3xl font-black text-slate-900 mt-1 block">{totalCompleted}</span>
+                      <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center border-b border-slate-100 pb-4">
+                        <div className="p-1 sm:p-2">
+                          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 block">JAMs Completed</span>
+                          <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">{totalCompleted}</span>
                         </div>
-                        <div className="p-2 border-x border-slate-100">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Avg. Score</span>
-                          <span className="text-3xl font-black text-blue-600 mt-1 block">{avgScore}</span>
+                        <div className="p-1 sm:p-2 border-x border-slate-100">
+                          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Avg. Score</span>
+                          <span className="text-2xl sm:text-3xl font-black text-blue-600 mt-1 block">{avgScore}</span>
                         </div>
-                        <div className="p-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Best Score</span>
-                          <span className="text-3xl font-black text-emerald-600 mt-1 block">{bestScore}</span>
+                        <div className="p-1 sm:p-2">
+                          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Best Score</span>
+                          <span className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block">{bestScore}</span>
                         </div>
                       </div>
 
@@ -802,16 +949,16 @@ export default function JamSimulatorPage() {
                     </div>
 
                     {/* RIGHT 5 COLS: LATEST JAM */}
-                    <div className="lg:col-span-5">
+                    <div className="lg:col-span-5 w-full">
                       {lastJam ? (
-                        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
+                        <div className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-xs space-y-3.5 sm:space-y-4 w-full overflow-hidden">
                           {/* Header */}
-                          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-3 gap-2 flex-wrap">
                             <span className="text-sm font-black text-slate-900 flex items-center gap-2">
                               <Clock className="w-4 h-4 text-slate-500" />
                               <span>Latest JAM Session</span>
                             </span>
-                            <span className="text-[11px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200/70 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                            <span className="text-[10px] sm:text-[11px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200/70 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                               {lastJam.category || 'CAMPUS'}
                             </span>
                           </div>
@@ -828,12 +975,12 @@ export default function JamSimulatorPage() {
                           </div>
 
                           {/* Previous JAM Question */}
-                          <h4 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+                          <h4 className="text-sm sm:text-base font-bold text-slate-900 leading-snug break-words">
                             &ldquo;{lastJam.topic}&rdquo;
                           </h4>
 
                           {/* Metadata Row: 60 sec · Medium · Date */}
-                          <div className="flex items-center gap-2.5 text-xs text-slate-500 font-medium pt-1">
+                          <div className="flex items-center gap-2 sm:gap-2.5 text-xs text-slate-500 font-medium pt-1 flex-wrap">
                             <span className="flex items-center gap-1">
                               <Clock className="w-3.5 h-3.5 text-slate-400" />
                               <span>{lastJam.durationSeconds || 60} sec</span>
@@ -860,7 +1007,7 @@ export default function JamSimulatorPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-xs space-y-3">
+                        <div className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-xs space-y-3 w-full overflow-hidden">
                           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                             <span className="text-sm font-black text-slate-900 flex items-center gap-2">
                               <Clock className="w-4 h-4 text-slate-400" />
@@ -990,7 +1137,7 @@ export default function JamSimulatorPage() {
 
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <button 
-                    onClick={() => { setIsReviewing(false); setTopic(''); setTopicDetails(null); }} 
+                    onClick={() => { setIsReviewing(false); updateActiveChallenge('', null); }} 
                     className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-2xl transition-all border border-slate-200/80 cursor-pointer text-sm"
                   >
                     Discard &amp; Back
@@ -1143,7 +1290,7 @@ export default function JamSimulatorPage() {
 
                 {/* Return to Arena Button */}
                 <button 
-                  onClick={() => { setAnalysis(null); setTopic(''); setTopicDetails(null); }} 
+                  onClick={() => { setAnalysis(null); updateActiveChallenge('', null); }} 
                   className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold py-4 px-6 rounded-2xl transition-all shadow-md shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-2 text-base"
                 >
                   <RotateCcw className="w-5 h-5" />
@@ -1244,11 +1391,48 @@ export default function JamSimulatorPage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="w-full max-w-6xl mx-auto py-8 flex justify-center mt-12 text-center shrink-0 border-t border-slate-100">
+      <footer className="w-full max-w-[1240px] mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-8 flex justify-center text-center shrink-0 border-t border-slate-100 mt-8 sm:mt-12">
         <p className="text-slate-400 text-xs tracking-wider uppercase font-semibold">
           Placement Intelligence Suite • JAM Arena
         </p>
       </footer>
+
+      {/* Silence Warning Pop-up */}
+      {showSilenceWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-red-950/90 border-2 border-red-500 rounded-xl p-8 max-w-md w-full shadow-[0_0_40px_rgba(239,68,68,0.3)] text-center animate-in fade-in zoom-in duration-200">
+            
+            <div className="flex justify-center mb-4">
+              <div className="p-4 bg-red-500/20 rounded-full">
+                <AlertTriangle className="w-10 h-10 text-red-500" />
+              </div>
+            </div>
+            
+            <h3 className="text-2xl font-bold text-white mb-2">No Speech Detected!</h3>
+            <p className="text-red-200 mb-8">
+              We didn&apos;t hear anything. Please make sure your microphone is connected, unmuted, and try completing your speech again.
+            </p>
+            
+            <div className="flex gap-4 justify-center">
+              <button 
+                onClick={() => {
+                  setShowSilenceWarning(false);
+                  // Reset timer and state here to let them try again
+                  setTimeLeft(60); 
+                  setTranscript('');
+                  setInterimText('');
+                  transcriptRef.current = '';
+                  interimTextRef.current = '';
+                }}
+                className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors cursor-pointer"
+              >
+                Try Again
+              </button>
+            </div>
+            
+          </div>
+        </div>
+      )}
     </div>
   );
 }

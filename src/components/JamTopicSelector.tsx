@@ -183,6 +183,13 @@ export const CURATED_TRACK_TOPICS: Record<string, Record<'Easy' | 'Medium' | 'Ha
   }
 };
 
+import {
+  generateDynamicJamChallenge,
+  JAM_SELECTED_TRACK_STORAGE_KEY,
+  JAM_SELECTED_DIFF_STORAGE_KEY,
+  addRecentJamQuestion
+} from '@/lib/jamChallengeGenerator';
+
 export const MASTER_DECK = MASTER_QUESTION_BANK.map(p => p.question);
 
 interface JamTopicSelectorProps {
@@ -193,8 +200,20 @@ interface JamTopicSelectorProps {
 
 export default function JamTopicSelector({ onTopicSelect, apiKey, selectedTopic }: JamTopicSelectorProps) {
   const [activeMode, setActiveMode] = useState<'ai' | 'deck' | 'custom'>('ai');
-  const [selectedTrack, setSelectedTrack] = useState<string>('Campus');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
+  const [selectedTrack, setSelectedTrack] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem(JAM_SELECTED_TRACK_STORAGE_KEY);
+      if (stored) return stored;
+    }
+    return 'Campus';
+  });
+  const [selectedDifficulty, setSelectedDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem(JAM_SELECTED_DIFF_STORAGE_KEY);
+      if (stored === 'Easy' || stored === 'Medium' || stored === 'Hard') return stored;
+    }
+    return 'Medium';
+  });
   const [customInput, setCustomInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -206,6 +225,20 @@ export default function JamTopicSelector({ onTopicSelect, apiKey, selectedTopic 
     setDeckPrompts(getCurrentMasterDeckSet());
     setPromptHistory(getPromptHistory());
   }, []);
+
+  const handleSelectTrack = (trackId: string) => {
+    setSelectedTrack(trackId);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(JAM_SELECTED_TRACK_STORAGE_KEY, trackId);
+    }
+  };
+
+  const handleSelectDifficulty = (diff: 'Easy' | 'Medium' | 'Hard') => {
+    setSelectedDifficulty(diff);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(JAM_SELECTED_DIFF_STORAGE_KEY, diff);
+    }
+  };
 
   const handleNewSet = () => {
     const currentIds = deckPrompts.map(p => p.id);
@@ -224,74 +257,25 @@ export default function JamTopicSelector({ onTopicSelect, apiKey, selectedTopic 
 
   const handleGenerateAiTopic = async () => {
     setIsGenerating(true);
-    const key = apiKey || getGeminiApiKey();
-
-    const trackObj = CHALLENGE_TRACKS.find((t) => t.id === selectedTrack);
-    const trackLabel = trackObj?.label || selectedTrack;
-
-    const prompt = `You are a placement training coordinator specializing in 60-second Just-A-Minute (JAM) rounds for engineering and MBA placement drives.
-Track: ${trackLabel}
-Difficulty: ${selectedDifficulty} (Easy: familiar question; Medium: reasoning + examples; Hard: ambiguous topic + opposing viewpoints)
-
-Generate ONE clear, engaging, and articulate JAM topic.
-Rules:
-1. Max 14 words.
-2. Formatted as an engaging question or direct prompt.
-3. Ideal for an impromptu 60-second speech.
-4. Output STRICT JSON: { "topic": string, "hint": string }`;
-
-    const candidateModels = [
-      'gemini-3.6-flash',
-      'gemini-3.5-flash',
-      'gemini-3.5-flash-lite',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash'
-    ];
-
-    let generated: { topic: string; hint: string } | null = null;
-
-    if (key) {
-      for (const model of candidateModels) {
-        try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: 'application/json' }
-            })
-          });
-          const data = await res.json();
-          const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (rawText) {
-            const parsed = JSON.parse(rawText);
-            if (parsed.topic) {
-              generated = parsed;
-              break;
-            }
-          }
-        } catch (e) {
-          console.warn(`Model ${model} attempt failed:`, e);
-        }
-      }
+    try {
+      const result = await generateDynamicJamChallenge({
+        track: selectedTrack,
+        difficulty: selectedDifficulty,
+        apiKey
+      });
+      triggerSelect(result.topic, result.hint);
+    } catch (e) {
+      console.error("AI challenge generation failed:", e);
+    } finally {
+      setIsGenerating(false);
     }
-
-    if (generated && generated.topic) {
-      triggerSelect(generated.topic, generated.hint);
-    } else {
-      // Fallback from rich curated list
-      const pool = CURATED_TRACK_TOPICS[selectedTrack]?.[selectedDifficulty] || CURATED_TRACK_TOPICS.Campus.Medium;
-      const randomTopic = pool[Math.floor(Math.random() * pool.length)];
-      triggerSelect(randomTopic, "Structure your answer: 10s opening stance, 35s concrete points/examples, 15s clear conclusion.");
-    }
-
-    setIsGenerating(false);
   };
 
   const handleDrawMasterDeck = () => {
     const pool = deckPrompts.length > 0 ? deckPrompts : MASTER_QUESTION_BANK;
     const randomPrompt = pool[Math.floor(Math.random() * pool.length)];
     markPromptPracticed(randomPrompt.question);
+    addRecentJamQuestion(randomPrompt.question);
     setPromptHistory(getPromptHistory());
     triggerSelect(
       randomPrompt.question,
@@ -301,26 +285,28 @@ Rules:
 
   const handleLockCustom = () => {
     if (!customInput.trim()) return;
-    triggerSelect(customInput.trim(), "Custom topic provided. Deliver a structured 60-second response.");
+    const clean = customInput.trim();
+    addRecentJamQuestion(clean);
+    triggerSelect(clean, "Custom topic provided. Deliver a structured 60-second response.");
   };
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
+    <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-xs space-y-5 sm:space-y-6 w-full overflow-hidden">
       {/* 1. Mode Selector: AI Challenge (Primary) | Master Deck | Custom Topic */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <span className="text-xs font-black text-slate-700 uppercase tracking-wider">
             Practice Mode
           </span>
-          <span className="text-xs text-blue-600 font-semibold">
+          <span className="text-[11px] sm:text-xs text-blue-600 font-semibold">
             AI Challenge Recommended
           </span>
         </div>
-        <div className="grid grid-cols-3 gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/70">
+        <div className="grid grid-cols-3 gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-slate-100/90 rounded-xl sm:rounded-2xl border border-slate-200/70">
           <button
             type="button"
             onClick={() => setActiveMode('ai')}
-            className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`py-2 sm:py-2.5 px-1 sm:px-3 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-bold transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${
               activeMode === 'ai'
                 ? 'bg-white text-blue-600 shadow-xs border border-slate-200/80'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent'
@@ -331,33 +317,33 @@ Rules:
           <button
             type="button"
             onClick={() => setActiveMode('deck')}
-            className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`py-2 sm:py-2.5 px-1 sm:px-3 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-bold transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${
               activeMode === 'deck'
                 ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent'
             }`}
           >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Master Deck</span>
+            <BookOpen className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Master Deck</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveMode('custom')}
-            className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`py-2 sm:py-2.5 px-1 sm:px-3 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-bold transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${
               activeMode === 'custom'
                 ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent'
             }`}
           >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>Custom Topic</span>
+            <Edit3 className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Custom Topic</span>
           </button>
         </div>
       </div>
 
       {/* MODE 1: AI CHALLENGE */}
       {activeMode === 'ai' && (
-        <div className="space-y-5 sm:space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* CHOOSE YOUR CHALLENGE TRACKS (4 CARDS) */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
@@ -369,7 +355,7 @@ Rules:
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5">
               {CHALLENGE_TRACKS.map((track) => {
                 const IconComponent = track.icon;
                 const isSelected = selectedTrack === track.id;
@@ -377,23 +363,23 @@ Rules:
                   <button
                     key={track.id}
                     type="button"
-                    onClick={() => setSelectedTrack(track.id)}
-                    className={`p-4 sm:p-4.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between relative group ${
+                    onClick={() => handleSelectTrack(track.id)}
+                    className={`p-3.5 sm:p-4.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between relative group ${
                       isSelected
                         ? `${track.accentBg} ${track.borderActive} shadow-xs`
                         : 'bg-white border-slate-200/90 text-slate-700 hover:border-slate-300 hover:bg-slate-50/70 shadow-2xs'
                     }`}
                   >
                     <div className="flex items-start justify-between w-full mb-1.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-white shadow-xs' : 'bg-slate-100'} ${track.color}`}>
-                          <IconComponent className="w-4 h-4" />
+                      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-white shadow-xs' : 'bg-slate-100'} ${track.color}`}>
+                          <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </div>
-                        <span className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                        <span className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight truncate">
                           {track.label}
                         </span>
                       </div>
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ml-1 ${
                         isSelected 
                           ? 'border-blue-600 bg-blue-600 text-white' 
                           : 'border-slate-300 bg-white group-hover:border-slate-400'
@@ -416,31 +402,31 @@ Rules:
               <label className="text-xs font-black text-slate-700 uppercase tracking-wider block">
                 Challenge Difficulty
               </label>
-              <span className="text-xs font-mono text-slate-500">
+              <span className="text-[11px] sm:text-xs font-mono text-slate-500">
                 {selectedDifficulty === 'Easy' && 'Familiar & direct'}
                 {selectedDifficulty === 'Medium' && 'Reasoning + examples'}
                 {selectedDifficulty === 'Hard' && 'Opposing views'}
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
               {DIFFICULTY_LEVELS.map((diff) => {
                 const isSelected = selectedDifficulty === diff.id;
                 return (
                   <button
                     key={diff.id}
                     type="button"
-                    onClick={() => setSelectedDifficulty(diff.id)}
-                    className={`p-3 sm:p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                    onClick={() => handleSelectDifficulty(diff.id)}
+                    className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                       isSelected
                         ? 'bg-blue-50/80 border-blue-600 text-blue-900 ring-1 ring-blue-500/30 shadow-xs'
                         : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
-                    <span className="text-xs font-extrabold tracking-wide mb-0.5">
+                    <span className="text-[11px] sm:text-xs font-extrabold tracking-wide mb-0.5">
                       {diff.label}
                     </span>
-                    <span className="text-[10px] sm:text-[11px] text-slate-500 font-normal leading-tight">
+                    <span className="text-[9px] sm:text-[11px] text-slate-500 font-normal leading-tight">
                       {diff.description}
                     </span>
                   </button>
@@ -454,7 +440,7 @@ Rules:
             type="button"
             onClick={handleGenerateAiTopic}
             disabled={isGenerating}
-            className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] disabled:opacity-50 text-white font-extrabold py-3.5 sm:py-4 px-6 rounded-2xl transition-all shadow-sm shadow-blue-500/20 flex items-center justify-center gap-2.5 cursor-pointer text-sm sm:text-base"
+            className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] disabled:opacity-50 text-white font-extrabold py-3.5 sm:py-4 px-4 sm:px-6 rounded-xl sm:rounded-2xl transition-all shadow-sm shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer text-sm sm:text-base"
           >
             {isGenerating ? (
               <>
@@ -475,7 +461,7 @@ Rules:
       {activeMode === 'deck' && (
         <div className="space-y-4">
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
               <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Universal Placement Deck
               </span>
@@ -509,27 +495,28 @@ Rules:
                   type="button"
                   onClick={() => {
                     markPromptPracticed(promptItem.question);
+                    addRecentJamQuestion(promptItem.question);
                     setPromptHistory(getPromptHistory());
                     triggerSelect(
                       promptItem.question,
                       promptItem.hint || "Universally tested campus prompt. Speak with conviction."
                     );
                   }}
-                  className={`w-full p-3 text-left rounded-xl border text-xs font-medium transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                  className={`w-full p-2.5 sm:p-3 text-left rounded-xl border text-xs font-medium transition-all flex items-center justify-between gap-2.5 cursor-pointer ${
                     isSelected
                       ? 'bg-blue-50 border-blue-500 text-blue-900 font-bold shadow-2xs'
                       : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
                   }`}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     {isWeak && (
                       <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded shrink-0">
                         Revisit
                       </span>
                     )}
-                    <span className="leading-snug">{promptItem.question}</span>
+                    <span className="leading-snug break-words">{promptItem.question}</span>
                   </div>
-                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full shrink-0 ${isSelected ? 'bg-blue-600 text-white font-bold' : 'bg-slate-100 text-slate-500'}`}>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full shrink-0 ml-1 ${isSelected ? 'bg-blue-600 text-white font-bold' : 'bg-slate-100 text-slate-500'}`}>
                     {isSelected ? 'Active' : 'Pick'}
                   </span>
                 </button>
