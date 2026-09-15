@@ -4,19 +4,19 @@ import { getScoreTheme } from '@/lib/scoreTheme';
 import VoiceVisualizer from '@/components/VoiceVisualizer';
 import ApiOnboarding from '@/components/ApiOnboarding';
 import { getGeminiApiKey, setGeminiApiKey, removeGeminiApiKey } from '@/lib/geminiKey';
-import { 
-  Shield, 
-  Users, 
-  Timer, 
-  TrendingUp, 
-  Zap, 
-  Target, 
-  Mic, 
-  Square, 
-  RotateCcw, 
-  Sparkles, 
-  ArrowLeft, 
-  Shuffle, 
+import {
+  Shield,
+  Users,
+  Timer,
+  TrendingUp,
+  Zap,
+  Target,
+  Mic,
+  Square,
+  RotateCcw,
+  Sparkles,
+  ArrowLeft,
+  Shuffle,
   AlertTriangle,
   BookOpen,
   ChevronDown,
@@ -48,12 +48,12 @@ export interface ScenarioItem {
   whyItWorks?: string;
 }
 
-export function ModelAnswerDrawer({ 
-  answerData, 
-  whyItWorks 
-}: { 
-  answerData?: ModelAnswer; 
-  whyItWorks?: string 
+export function ModelAnswerDrawer({
+  answerData,
+  whyItWorks
+}: {
+  answerData?: ModelAnswer;
+  whyItWorks?: string
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -166,10 +166,18 @@ const COMPETENCY_CRITERIA: Record<string, string[]> = {
   ]
 };
 
+const INTERVIEWER_FOCUS: Record<string, string> = {
+  'leadership': 'Ownership · Decisiveness · Initiative · Accountability',
+  'conflict': 'Active Listening · Objective Compromise · Team Alignment',
+  'crisis': 'Calm Prioritization · Rapid Triage · Risk Mitigation',
+  'failure': 'Accountability · Root Cause Analysis · Resilience & Growth',
+  'learning': 'Self-Direction · Adaptability · Knowledge Sharing'
+};
+
 const COMPETENCIES = [
-  { 
-    id: 'leadership', 
-    label: 'Leadership & Ownership', 
+  {
+    id: 'leadership',
+    label: 'Leadership & Ownership',
     icon: Shield,
     pool: [
       {
@@ -204,9 +212,9 @@ const COMPETENCIES = [
       }
     ]
   },
-  { 
-    id: 'conflict', 
-    label: 'Conflict Resolution', 
+  {
+    id: 'conflict',
+    label: 'Conflict Resolution',
     icon: Users,
     pool: [
       {
@@ -241,9 +249,9 @@ const COMPETENCIES = [
       }
     ]
   },
-  { 
-    id: 'crisis', 
-    label: 'Crisis & Deadlines', 
+  {
+    id: 'crisis',
+    label: 'Crisis & Deadlines',
     icon: Timer,
     pool: [
       {
@@ -278,9 +286,9 @@ const COMPETENCIES = [
       }
     ]
   },
-  { 
-    id: 'failure', 
-    label: 'Failure & Resilience', 
+  {
+    id: 'failure',
+    label: 'Failure & Resilience',
     icon: TrendingUp,
     pool: [
       {
@@ -315,9 +323,9 @@ const COMPETENCIES = [
       }
     ]
   },
-  { 
-    id: 'learning', 
-    label: 'Rapid Learning', 
+  {
+    id: 'learning',
+    label: 'Rapid Learning',
     icon: Zap,
     pool: [
       {
@@ -395,6 +403,8 @@ export default function BehavioralCoachPage() {
   const [isImproving, setIsImproving] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const [retryFocusBanner, setRetryFocusBanner] = useState<{ pillar: string; advice: string } | null>(null);
+  const [sessionStats, setSessionStats] = useState<{ totalSessions: number; avgScore: number }>({ totalSessions: 4, avgScore: 84 });
 
   // Multi-Stage Interview Flow States
   const [interviewPhase, setInterviewPhase] = useState<'prep' | 'main' | 'generating-followup' | 'followup' | 'feedback'>('prep');
@@ -425,6 +435,14 @@ export default function BehavioralCoachPage() {
     window.addEventListener('gemini_api_key_updated', syncKey);
 
     if (typeof window !== 'undefined') {
+      try {
+        const history = JSON.parse(localStorage.getItem('star_score_history') || '[]');
+        if (Array.isArray(history) && history.length > 0) {
+          const avg = Math.round(history.reduce((acc: number, item: any) => acc + (item.overallScore || 80), 0) / history.length);
+          setSessionStats({ totalSessions: history.length, avgScore: avg });
+        }
+      } catch (e) {}
+
       const params = new URLSearchParams(window.location.search);
       const compParam = params.get('competency');
       const diffParam = params.get('difficulty');
@@ -442,7 +460,7 @@ export default function BehavioralCoachPage() {
       window.removeEventListener('gemini_api_key_updated', syncKey);
       if (streamRef.current) streamRef.current.getTracks().forEach((track) => track.stop());
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current.close().catch(() => { });
       }
     };
   }, []);
@@ -472,7 +490,7 @@ export default function BehavioralCoachPage() {
     setShowHelp(false);
     const targetCompId = competencyId || activeCompetency;
     const comp = COMPETENCIES.find((c) => c.id === targetCompId) || COMPETENCIES[0];
-    
+
     setActiveScenario(null);
     setAnalysis(null);
     setEvaluationWarnings(null);
@@ -705,7 +723,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch (e) {}
+      } catch (e) { }
       recognitionRef.current = null;
     }
     const currentText = (transcript + (interimText ? ' ' + interimText : '')).trim();
@@ -716,7 +734,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
       streamRef.current = null;
     }
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current.close().catch(() => { });
       audioContextRef.current = null;
     }
     analyserRef.current = null;
@@ -731,7 +749,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
 
   const generateHeuristicWarnings = (text: string, durationSec: number) => {
     const warnings: { type: string; message: string }[] = [];
-    
+
     // Check 1: Team Language
     const weMatches = (text.match(/\b(we|our|us)\b/gi) || []).length;
     const iMatches = (text.match(/\b(i|my|mine|me)\b/gi) || []).length;
@@ -889,13 +907,99 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
           durationSeconds: duration
         };
         const existing = JSON.parse(localStorage.getItem('star_score_history') || '[]');
-        localStorage.setItem('star_score_history', JSON.stringify([newStarRecord, ...existing]));
-      } catch (e) {}
+        const updatedHistory = [newStarRecord, ...existing];
+        localStorage.setItem('star_score_history', JSON.stringify(updatedHistory));
+        const avg = Math.round(updatedHistory.reduce((acc: number, item: any) => acc + (item.overallScore || 80), 0) / updatedHistory.length);
+        setSessionStats({ totalSessions: updatedHistory.length, avgScore: avg });
+      } catch (e) { }
     } catch (e) {
       alert("Network error communicating with AI server.");
     } finally {
       setIsEvaluating(false);
     }
+  };
+
+  const handleRetryWithFocus = (pillarName: string, advice: string) => {
+    setRetryFocusBanner({
+      pillar: pillarName,
+      advice: advice
+    });
+    setAnalysis(null);
+    setEvaluationWarnings(null);
+    setEvalCoverage(null);
+    setPacingWarning(null);
+    setScorecardData(null);
+    setImprovedAnswer(null);
+    setTranscript('');
+    setIsPreparing(false);
+  };
+
+  const getPillarAnalysis = () => {
+    const scores = [
+      {
+        name: 'Situation',
+        score: analysis?.starScores?.situation ?? analysis?.starScores?.Situation ?? 8,
+        target: '10%',
+        color: 'bg-blue-600',
+        barCount: Math.round(((analysis?.starScores?.situation ?? analysis?.starScores?.Situation ?? 8) / 10) * 10),
+        desc: 'Context & problem setup',
+        advice: 'Keep the background context concise (~15–20s). Save your energy and time for your personal actions.'
+      },
+      {
+        name: 'Task',
+        score: analysis?.starScores?.task ?? analysis?.starScores?.Task ?? 8,
+        target: '15%',
+        color: 'bg-purple-600',
+        barCount: Math.round(((analysis?.starScores?.task ?? analysis?.starScores?.Task ?? 8) / 10) * 10),
+        desc: 'Your specific responsibility',
+        advice: 'Explicitly state YOUR individual role and objective, distinct from the broader group.'
+      },
+      {
+        name: 'Action',
+        score: analysis?.starScores?.action ?? analysis?.starScores?.Action ?? 9,
+        target: '55%',
+        color: 'bg-[#f97316]',
+        barCount: Math.round(((analysis?.starScores?.action ?? analysis?.starScores?.Action ?? 9) / 10) * 10),
+        desc: 'Personal ownership & steps',
+        advice: 'Spend the majority (55%) of your time detailing 3–4 specific decisions and personal steps YOU executed.'
+      },
+      {
+        name: 'Result',
+        score: analysis?.starScores?.result ?? analysis?.starScores?.Result ?? 6,
+        target: '20%',
+        color: 'bg-emerald-600',
+        barCount: Math.round(((analysis?.starScores?.result ?? analysis?.starScores?.Result ?? 6) / 10) * 10),
+        desc: 'Measurable outcome & impact',
+        advice: 'This time, make your outcome specific and measurable (e.g. % improved, time saved, metrics, lessons learned).'
+      }
+    ];
+
+    const sorted = [...scores].sort((a, b) => b.score - a.score);
+    const strongest = sorted[0];
+    const weakest = sorted[sorted.length - 1];
+
+    const strongSummaries: Record<string, string> = {
+      'Action': 'You gave specific personal steps and decisions.',
+      'Situation': 'Clear, concise background setup.',
+      'Task': 'Well-defined individual responsibility.',
+      'Result': 'Concrete, impactful outcome shared.'
+    };
+
+    const weakSummaries: Record<string, string> = {
+      'Result': 'Add measurable impact and quantitative metrics.',
+      'Action': 'Elaborate more on specific personal decisions YOU made.',
+      'Task': 'State your distinct role more explicitly.',
+      'Situation': 'Keep the opening context more concise to save time for Action.'
+    };
+
+    return {
+      strongPillar: strongest.name,
+      strongSummary: strongSummaries[strongest.name] || 'Structured your points clearly.',
+      weakPillar: weakest.name,
+      weakSummary: weakSummaries[weakest.name] || 'Add more concrete details and metrics.',
+      weakAdvice: weakest.advice,
+      scores
+    };
   };
 
   const handleImproveAnswer = async () => {
@@ -974,7 +1078,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
   else currentStepIndex = 3;                     // Result (24-0s -> 96-120s elapsed)
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans p-6 sm:p-10 relative overflow-hidden">
+    <div className="min-h-screen bg-white text-slate-900 font-sans px-4 sm:px-8 lg:px-12 py-6 sm:py-8 lg:py-10 relative overflow-hidden">
       {/* API Setup Modal if user wants to change key */}
       {showSetupModal && (
         <ApiOnboarding
@@ -987,31 +1091,37 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
         />
       )}
 
-      <div className="max-w-5xl mx-auto space-y-8 relative z-10">
+      <div className="max-w-[1240px] mx-auto space-y-8 sm:space-y-10 lg:space-y-12 relative z-10">
         {/* TOP HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-6 gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-5 sm:pb-6 gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-[#fbbf24] to-[#f97316] text-white flex items-center justify-center shadow-sm shadow-amber-500/20 shrink-0">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-b from-[#fbbf24] to-[#f97316] text-white flex items-center justify-center shadow-sm shadow-amber-500/20 shrink-0">
               <Star className="w-5 h-5 fill-white text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                STAR Method Behavioral Coach
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-normal">
-                Structure interview answers using Situation, Task, Action, and Result.
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  STAR Method Behavioral Coach
+                </h1>
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-600">
+                  <span>📈</span>
+                  <span>This week: {sessionStats.totalSessions} sessions · Avg. {sessionStats.avgScore}/100</span>
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5">
+                Structure behavioral interview answers using Situation, Task, Action, and Result.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* Global API Key Status Badge */}
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full text-xs shadow-xs">
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full text-xs shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-slate-700 font-medium">API Connected</span>
+              <span className="text-slate-700 font-medium text-xs">Connected</span>
               <button
                 onClick={() => setShowSetupModal(true)}
-                className="text-[#f97316] hover:text-orange-600 font-semibold ml-0.5 cursor-pointer underline"
+                className="text-[#f97316] hover:text-orange-600 font-semibold ml-0.5 cursor-pointer underline text-xs"
                 title="Update API key"
               >
                 Edit
@@ -1020,31 +1130,31 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
 
             <a
               href="/jam"
-              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-xs"
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-2xs"
             >
               <Mic className="w-3.5 h-3.5 text-blue-600" />
               <span>JAM Simulator</span>
             </a>
             <a
               href="/mock-hr"
-              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-xs"
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-2xs"
             >
               <Users className="w-3.5 h-3.5 text-purple-600" />
               <span>AI Mock Interview</span>
             </a>
             <a
               href="/analytics"
-              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-xs"
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-2xs"
             >
               <BarChart3 className="w-3.5 h-3.5 text-slate-500" />
               <span>Analytics</span>
             </a>
             <a
               href="/"
-              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-xs"
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-2xs"
             >
               <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
-              <span>Suite Home</span>
+              <span>Suite</span>
             </a>
           </div>
         </div>
@@ -1056,155 +1166,153 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
           </div>
         )}
 
-        {/* 1. TARGET BEHAVIORAL COMPETENCY (GRID FORMAT INSPIRED BY REFERENCE UI) */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-              1. Target Behavioral Competency
-            </label>
-            <span className="text-xs font-mono text-slate-500">5 High-Impact Domains</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {COMPETENCIES.map((comp) => {
-              const Icon = comp.icon;
-              const isSelected = activeCompetency === comp.id;
-              const descriptions: Record<string, string> = {
-                leadership: 'Stepping up, taking ownership, and driving accountability.',
-                conflict: 'Navigating disagreements with data and active listening.',
-                crisis: 'Triage and composure under high stakes and crash events.',
-                failure: 'Post-mortem resilience and retaining core engineering lessons.',
-                learning: 'Rapid tech stack adoption under tight time bounds.'
-              };
-              return (
-                <div
-                  key={comp.id}
-                  onClick={() => handleSelectCompetency(comp.id)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-1.5 ${
-                    isSelected
-                      ? 'bg-amber-50/80 text-amber-900 border-[#f97316] shadow-sm ring-1 ring-[#f97316]/30'
-                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 shadow-xs'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-amber-100 text-[#f97316]' : 'bg-slate-100 text-slate-600'}`}>
-                      <Icon className="w-4 h-4 shrink-0" />
-                    </div>
-                    <h4 className={`text-xs font-bold tracking-wide ${isSelected ? 'text-slate-900 font-extrabold' : 'text-slate-800'}`}>
-                      {comp.label}
-                    </h4>
-                  </div>
-                  <p className="text-[11px] text-slate-500 leading-relaxed pl-8">
-                    {descriptions[comp.id] || 'Behavioral mastery scenario.'}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 2. DIFFICULTY LEVEL (CLEAN 4-SEGMENT SELECTOR) */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-              2. Difficulty Level
-            </label>
-            <span className="text-[11px] font-mono text-slate-500">
-              {difficulty === 'Easy' && 'Clear scenario + obvious responsibility'}
-              {difficulty === 'Medium' && 'Ambiguous situation + competing priorities'}
-              {difficulty === 'Hard' && 'Messy situation + stakeholder conflict'}
-              {difficulty === 'Expert' && '🔥 High-stakes chaos + unexpected follow-up probes'}
+        {/* INTERVIEW SETUP (CALM, SPACIOUS & DE-BOXED) */}
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xs space-y-7 sm:space-y-8">
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-100 pb-4">
+            <div>
+              <span className="text-[11px] font-black tracking-widest text-[#f97316] uppercase block">
+                INTERVIEW SETUP
+              </span>
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900">
+                Choose Your Skill &amp; Strategy Roadmap
+              </h2>
+            </div>
+            <span className="text-xs text-slate-400 font-mono hidden sm:inline">
+              Step 1 of 2 · Tailor your challenge
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {([
-              { level: 'Easy', label: 'Easy', badge: '100% Clear' },
-              { level: 'Medium', label: 'Medium', badge: 'Trade-offs' },
-              { level: 'Hard', label: 'Hard', badge: 'Conflict' },
-              { level: 'Expert', label: '🔥 Expert', badge: 'High-Stakes' }
-            ] as const).map(({ level, label, badge }) => {
-              const isActive = difficulty === level;
-              return (
-                <button
-                  key={level}
-                  onClick={() => setDifficulty(level as any)}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                    isActive
-                      ? 'bg-amber-50/80 border-[#f97316] text-slate-900 ring-1 ring-[#f97316]/30 shadow-xs'
-                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 shadow-xs'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold">{label}</span>
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isActive ? 'bg-amber-100 text-[#f97316] font-bold' : 'bg-slate-100 text-slate-500'}`}>
+          {/* 1. Target Behavioral Competency */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">
+                1. Target Behavioral Competency
+              </label>
+              <span className="text-xs font-mono text-slate-400 hidden sm:inline">5 Core Domains</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
+              {COMPETENCIES.map((comp) => {
+                const Icon = comp.icon;
+                const isSelected = activeCompetency === comp.id;
+                return (
+                  <button
+                    key={comp.id}
+                    type="button"
+                    onClick={() => handleSelectCompetency(comp.id)}
+                    className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 cursor-pointer ${
+                      isSelected
+                        ? 'bg-amber-50/90 text-amber-950 border-[#f97316] ring-2 ring-[#f97316]/20 shadow-xs font-bold'
+                        : 'bg-slate-50/50 hover:bg-slate-50 border-slate-200/70 text-slate-700 hover:border-slate-300 font-medium'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-amber-500/20 text-[#f97316]' : 'bg-slate-100 text-slate-500'}`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs sm:text-sm block leading-snug font-bold">{comp.label}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 2. Difficulty Level */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">
+                2. Difficulty Level
+              </label>
+              <span className="text-xs font-mono text-slate-500 hidden sm:inline">
+                {difficulty === 'Easy' && 'Clear scenario + obvious responsibility'}
+                {difficulty === 'Medium' && 'Ambiguous situation + competing priorities'}
+                {difficulty === 'Hard' && 'Messy situation + stakeholder conflict'}
+                {difficulty === 'Expert' && '🔥 High-stakes chaos + unexpected follow-up probes'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
+              {([
+                { level: 'Easy', label: 'Easy', badge: '100% Clear' },
+                { level: 'Medium', label: 'Medium', badge: 'Trade-offs' },
+                { level: 'Hard', label: 'Hard', badge: 'Conflict' },
+                { level: 'Expert', label: '🔥 Expert', badge: 'High-Stakes' }
+              ] as const).map(({ level, label, badge }) => {
+                const isActive = difficulty === level;
+                return (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setDifficulty(level as any)}
+                    className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                      isActive
+                        ? 'bg-amber-50/90 text-amber-950 border-[#f97316] ring-2 ring-[#f97316]/20 shadow-xs font-bold'
+                        : 'bg-slate-50/50 hover:bg-slate-50 border-slate-200/70 text-slate-700 hover:border-slate-300 font-medium'
+                    }`}
+                  >
+                    <span className="text-xs sm:text-sm font-bold">{label}</span>
+                    <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full ${isActive ? 'bg-amber-100 text-[#f97316] font-bold' : 'bg-slate-200/70 text-slate-600'}`}>
                       {badge}
                     </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 3. STAR TIME ALLOCATION / ROADMAP */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-                <span className="text-[#f97316]">⭐</span> STAR Time Allocation Roadmap
-              </span>
-              <div className="group relative inline-flex items-center cursor-help">
-                <Info className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 transition-colors" />
-                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block w-64 p-2.5 bg-slate-900 text-[11px] text-slate-100 rounded-lg shadow-xl border border-slate-800 z-50">
-                  Interviewers prioritize your specific actions. Dedicate ~55% of your time to the Action phase.
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] font-mono font-bold bg-amber-50 text-[#f97316] border border-amber-200 px-2.5 py-0.5 rounded-full">
-                55% Action Focus
-              </span>
-              <span className="text-[11px] font-mono text-slate-500">Total: 120s</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {/* S */}
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800">S — Situation</span>
-                <span className="text-[10px] font-mono text-slate-500">10% (~12s)</span>
-              </div>
-              <p className="text-[11px] text-slate-500 leading-tight">Setting &amp; context</p>
-            </div>
-
-            {/* T */}
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800">T — Task</span>
-                <span className="text-[10px] font-mono text-slate-500">15% (~18s)</span>
-              </div>
-              <p className="text-[11px] text-slate-500 leading-tight">Your responsibility</p>
-            </div>
-
-            {/* A - Highlighted in Orange STAR Theme */}
-            <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-300 space-y-1 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-900 flex items-center gap-1">
-                  <span>⭐</span> A — Action
+          {/* 3. STAR Time Allocation Roadmap */}
+          <div className="space-y-3 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <span>⭐</span>
+                <span>3. STAR Time Allocation Roadmap</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-[#f97316] bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                  55% Action Focus
                 </span>
-                <span className="text-[10px] font-mono text-[#f97316] font-bold">55% (~66s)</span>
+                <span className="text-xs font-mono text-slate-400">Total: 120s</span>
               </div>
-              <p className="text-[11px] text-amber-800 font-medium leading-tight">3–5 personal steps</p>
             </div>
 
-            {/* R */}
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800">R — Result</span>
-                <span className="text-[10px] font-mono text-slate-500">20% (~24s)</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
+              {/* S */}
+              <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/70 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs sm:text-sm font-black text-slate-800">S — Situation</span>
+                  <span className="text-[11px] font-mono font-bold text-slate-500">10% (~12s)</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">Context &amp; problem setting</p>
               </div>
-              <p className="text-[11px] text-slate-500 leading-tight">Metrics &amp; lessons</p>
+
+              {/* T */}
+              <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/70 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs sm:text-sm font-black text-slate-800">T — Task</span>
+                  <span className="text-[11px] font-mono font-bold text-slate-500">15% (~18s)</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">Your specific goal &amp; role</p>
+              </div>
+
+              {/* A (Visual Focus with 55% allocation) */}
+              <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-300 ring-2 ring-amber-400/20 space-y-1.5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs sm:text-sm font-black text-amber-950 flex items-center gap-1">
+                    <span>⭐</span> A — Action
+                  </span>
+                  <span className="text-[11px] font-mono text-[#f97316] font-extrabold">55% (~66s)</span>
+                </div>
+                <p className="text-xs text-amber-900 font-medium leading-relaxed">3–5 personal steps &amp; decisions</p>
+              </div>
+
+              {/* R */}
+              <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/70 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs sm:text-sm font-black text-slate-800">R — Result</span>
+                  <span className="text-[11px] font-mono font-bold text-slate-500">20% (~24s)</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">Measurable outcome &amp; metrics</p>
+              </div>
             </div>
           </div>
         </div>
@@ -1247,7 +1355,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
                     <Brain className="w-8 h-8 text-[#f97316] animate-pulse" />
                   </div>
                 </div>
-                
+
                 <div className="max-w-xl mx-auto space-y-2">
                   <h3 className="text-2xl font-bold text-slate-900 leading-snug">Take a moment to structure your answer</h3>
                   <p className="text-slate-500 text-sm font-normal">Take 15 seconds to mentally map your story before speaking.</p>
@@ -1274,7 +1382,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
 
                 {/* The actual recording trigger */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-                  <button 
+                  <button
                     onClick={() => {
                       setIsPreparing(false);
                       setInterviewPhase('main');
@@ -1294,7 +1402,7 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
               </div>
             ) : isRecording ? (
               /* FOCUSED INTERVIEW RECORDING MODE */
-              <div className="bg-white border border-slate-200 p-6 sm:p-10 rounded-3xl space-y-7 shadow-sm relative overflow-hidden animate-in fade-in duration-200">
+              <div className="bg-white border border-slate-200/80 p-6 sm:p-10 lg:p-12 rounded-3xl space-y-7 sm:space-y-8 shadow-xs relative overflow-hidden animate-in fade-in duration-200">
                 {/* 1. Header: Live Status + Live Audio Waveform + 120s Timer */}
                 <div className="flex justify-between items-center border-b border-slate-100 pb-5 gap-4">
                   <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
@@ -1332,12 +1440,12 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
                 </div>
 
                 {/* 2. Interview Question Section */}
-                <div className="space-y-2.5">
+                <div className="space-y-3 py-1 sm:py-2">
                   <span className="text-xs font-black tracking-widest text-[#f97316] uppercase">
                     YOUR QUESTION
                   </span>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 leading-snug tracking-tight">
-                    {activeScenario.actualQuestion}
+                  <h2 className="text-2xl sm:text-3xl md:text-[34px] lg:text-[40px] font-black text-slate-900 leading-[1.32] tracking-tight max-w-4xl">
+                    &ldquo;{activeScenario.actualQuestion}&rdquo;
                   </h2>
                 </div>
 
@@ -1359,13 +1467,12 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
                         <div key={item.step} className="relative z-10 flex flex-col items-center">
                           {/* Step Badge */}
                           <div
-                            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-black text-sm sm:text-base transition-all duration-300 ${
-                              isActive
+                            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-black text-sm sm:text-base transition-all duration-300 ${isActive
                                 ? 'bg-gradient-to-b from-[#fbbf24] to-[#f97316] text-black ring-4 ring-amber-500/20 shadow-md scale-105 font-black'
                                 : isPassed
-                                ? 'bg-slate-200 text-slate-800 border border-slate-300'
-                                : 'bg-white text-slate-400 border border-slate-200'
-                            }`}
+                                  ? 'bg-slate-200 text-slate-800 border border-slate-300'
+                                  : 'bg-white text-slate-400 border border-slate-200'
+                              }`}
                           >
                             {item.step}
                           </div>
@@ -1440,104 +1547,143 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
               </div>
             ) : (
               /* CLEAN SCENARIO / QUESTION HERO CARD */
-              <div className="bg-white border border-slate-200 p-6 sm:p-9 rounded-3xl space-y-7 shadow-sm relative overflow-hidden">
-                
-                {/* 1. Header: Small Label + Difficulty Badge */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-[#f97316] animate-pulse"></span>
-                    <span className="text-xs font-black tracking-widest text-slate-700 uppercase">
+              <div className="bg-white border border-slate-200/80 p-6 sm:p-10 lg:p-12 rounded-3xl space-y-7 sm:space-y-8 shadow-xs relative overflow-hidden">
+
+                {/* 1. Header: Assigned Scenario Metadata + Top-Right Interviewer Focus */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-5">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#f97316] animate-pulse shrink-0"></span>
+                    <span className="text-xs font-black tracking-widest text-slate-500 uppercase">
                       ASSIGNED SCENARIO
                     </span>
-                    <span className="text-slate-300 font-bold hidden sm:inline">·</span>
-                    <span className="text-[11px] font-bold tracking-wider text-slate-500 uppercase hidden sm:inline">
+                    <span className="text-slate-300">·</span>
+                    <span className="text-xs font-bold text-slate-800 uppercase">
                       {(COMPETENCIES.find(c => c.id === activeCompetency)?.label || activeCompetency).toUpperCase()}
+                    </span>
+                    <span className="text-slate-300">·</span>
+                    <span className="text-xs font-mono font-bold text-[#f97316] uppercase">
+                      {difficulty.toUpperCase()} · 120s
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-amber-50 text-[#f97316] border border-amber-200 uppercase tracking-wider">
-                      {difficulty} Difficulty
+                  {/* Interviewer Focus Strip positioned cleanly towards top-right without competing */}
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-50/90 border border-amber-200/80 text-xs text-amber-950 self-start sm:self-auto flex-wrap">
+                    <span className="text-[#f97316] font-bold shrink-0">🎯 Interviewer is evaluating:</span>
+                    <span className="font-semibold text-slate-800">
+                      {activeScenario.evaluatingMetrics && activeScenario.evaluatingMetrics.length > 0
+                        ? activeScenario.evaluatingMetrics.join(' · ')
+                        : (INTERVIEWER_FOCUS[activeCompetency] || 'Ownership · Decision-making · Impact')}
                     </span>
-                    <span className="text-xs font-mono text-slate-400 hidden sm:inline">Target: 120s</span>
                   </div>
                 </div>
 
-                {/* 2. Dominant Interview Question (Visual HERO) */}
-                <div className="space-y-3">
-                  <span className="text-[11px] font-extrabold tracking-widest text-[#f97316] uppercase block">
+                {/* Retry with Focus banner (If user clicked "Try Again with Focus") */}
+                {retryFocusBanner && (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-300 ring-1 ring-amber-400/30 flex items-start justify-between gap-3 animate-in fade-in duration-150">
+                    <div className="flex items-start gap-3">
+                      <div className="p-1.5 rounded-xl bg-amber-100 text-[#f97316] shrink-0 mt-0.5">
+                        <Target className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-[#f97316]">
+                            RETRY WITH FOCUS
+                          </span>
+                          <span className="text-slate-300">·</span>
+                          <span className="text-xs sm:text-sm font-bold text-amber-950">
+                            🎯 Focus Area: {retryFocusBanner.pillar}
+                          </span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-amber-900 mt-1 font-medium leading-relaxed">
+                          {retryFocusBanner.advice}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRetryFocusBanner(null)}
+                      className="text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer p-1 shrink-0"
+                      title="Dismiss note"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {/* 2. Dominant Interview Question (Spacious Visual HERO) */}
+                <div className="space-y-3 py-1 sm:py-2">
+                  <span className="text-xs font-black tracking-widest text-[#f97316] uppercase block">
                     INTERVIEW QUESTION
                   </span>
-                  <h2 className="text-2xl sm:text-3xl md:text-[32px] font-extrabold text-slate-900 leading-snug tracking-tight">
+
+                  <h2 className="text-2xl sm:text-3xl md:text-[34px] lg:text-[40px] font-black text-slate-900 leading-[1.32] tracking-tight max-w-4xl">
                     &ldquo;{activeScenario.actualQuestion}&rdquo;
                   </h2>
                 </div>
 
-                {/* 3. Collapsible Real-World Context ("View Context ↓") */}
-                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
+                {/* 3. Collapsible Real-World Context Row (Lightweight Expandable Row) */}
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/60 overflow-hidden transition-all">
                   <button
                     type="button"
                     onClick={() => setShowScenarioContext(!showScenarioContext)}
-                    className="w-full flex items-center justify-between p-3.5 px-4 text-left cursor-pointer hover:bg-slate-100/70 transition-colors"
+                    className="w-full flex items-center justify-between py-3.5 px-4 sm:px-5 text-left cursor-pointer hover:bg-slate-100/60 transition-colors"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-800">
-                        {showScenarioContext ? 'Hide Context ↑' : 'View Context ↓'}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 font-mono">
+                    <span className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <span className="text-slate-400 text-xs">{showScenarioContext ? '▴' : '▾'}</span>
+                      <span>{showScenarioContext ? 'Hide Context' : 'View Context'}</span>
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium">
                       {showScenarioContext ? 'Collapse' : 'Real-World Conflict Context'}
                     </span>
                   </button>
 
                   {showScenarioContext && (
-                    <div className="p-4 border-t border-slate-200 bg-white text-slate-700 text-xs sm:text-sm leading-relaxed space-y-1.5 animate-in fade-in duration-150">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#f97316] block">
+                    <div className="p-4 sm:p-6 border-t border-slate-200/70 bg-white text-slate-700 space-y-2 animate-in fade-in duration-150">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#f97316] block">
                         REAL-WORLD CONTEXT
                       </span>
-                      <p className="text-slate-600 font-normal leading-relaxed">
+                      <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
                         {activeScenario.scenarioContext}
                       </p>
                     </div>
                   )}
                 </div>
 
-                {/* 4. Collapsible Hint Section ("Need a Hint? →" / "Need a Hint? ↓") */}
-                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
+                {/* 4. Answer Tips Section (Lightweight Expandable Row) */}
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/60 overflow-hidden transition-all">
                   <button
                     type="button"
                     onClick={() => setShowHelp(!showHelp)}
-                    className="w-full flex items-center justify-between p-3.5 px-4 text-left cursor-pointer hover:bg-slate-100/70 transition-colors"
+                    className="w-full flex items-center justify-between py-3.5 px-4 sm:px-5 text-left cursor-pointer hover:bg-slate-100/60 transition-colors"
                   >
-                    <div className="flex items-center gap-2">
-                      <Lightbulb className="w-3.5 h-3.5 text-[#f97316]" />
-                      <span className="text-xs font-bold text-slate-800">
-                        {showHelp ? 'Need a Hint? ↑' : 'Need a Hint? →'}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      {showHelp ? 'Hide Guidance' : 'STAR Strategy & Focus'}
+                    <span className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <span>💡</span>
+                      <span>{showHelp ? 'Hide Answer Tips' : 'Answer Tips'}</span>
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium">
+                      {showHelp ? 'Collapse' : 'STAR Strategy & Focus'}
                     </span>
                   </button>
 
                   {showHelp && (
-                    <div className="p-4 sm:p-5 border-t border-slate-200 bg-white space-y-3.5 animate-in fade-in duration-150">
-                      <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
-                        <div className="flex items-center gap-2 text-xs font-bold text-[#f97316] uppercase tracking-wider">
-                          <span>💡 Answer Guidance &amp; Tips</span>
+                    <div className="p-4 sm:p-6 border-t border-slate-200/70 bg-white space-y-4 animate-in fade-in duration-150">
+                      <div className="p-4 bg-amber-50/80 border border-amber-200/80 rounded-2xl space-y-2.5">
+                        <div className="flex items-center justify-between text-xs font-bold text-[#f97316] uppercase tracking-wider">
+                          <span>💡 Answer Tips &amp; STAR Focus</span>
+                          <span className="text-[11px] font-mono font-medium text-slate-500">Coach Guidance</span>
                         </div>
-                        <ul className="text-xs text-slate-700 space-y-1.5 list-disc list-inside font-normal leading-relaxed">
+                        <ul className="text-xs sm:text-sm text-slate-700 space-y-2 list-disc list-inside font-normal leading-relaxed">
                           <li>
-                            <strong className="text-slate-900 font-bold">Situation &amp; Task:</strong> Keep background setup concise (~20s total). Clearly outline your responsibility.
+                            <strong className="text-slate-900 font-bold">Keep the situation brief</strong> — Set up context in 15–20s; avoid getting bogged down in background details.
                           </li>
                           <li>
-                            <strong className="text-slate-900 font-bold">Action Phase (55% Focus):</strong> Detail 3–4 specific decisions, technical steps, or actions <span className="text-amber-900 underline decoration-amber-500/50">YOU</span> executed personally.
+                            <strong className="text-slate-900 font-bold">Spend most of your answer on what YOU did</strong> — Focus on your specific actions, decisions, and personal ownership (55% of answer).
                           </li>
                           <li>
-                            <strong className="text-slate-900 font-bold">Result &amp; Impact:</strong> Conclude with measurable metrics, percentages, time saved, and core learnings.
+                            <strong className="text-slate-900 font-bold">End with a measurable result</strong> — Conclude with concrete outcomes, percentages, metrics, or lessons learned.
                           </li>
                           {activeScenario.whyItWorks && (
-                            <li className="text-slate-800 italic font-semibold pt-1 border-t border-amber-200 mt-1 list-none flex items-start gap-1.5">
+                            <li className="text-slate-800 italic font-semibold pt-1.5 border-t border-amber-200/80 mt-1.5 list-none flex items-start gap-2">
                               <span>✨</span>
                               <span><strong className="text-[#f97316] not-italic">Key Focus:</strong> {activeScenario.whyItWorks}</span>
                             </li>
@@ -1554,23 +1700,23 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
 
                 {/* 5. Start Interview Button & Secondary "Try Another" */}
                 {!isRecording && (
-                  <div className="space-y-3 pt-3 border-t border-slate-100">
+                  <div className="space-y-3 pt-2">
                     <button
                       onClick={() => startRecording()}
-                      className="w-full bg-gradient-to-r from-[#fbbf24] to-[#f97316] hover:opacity-95 active:scale-[0.99] text-black font-extrabold py-4 px-8 rounded-2xl transition-all shadow-md text-base sm:text-lg flex items-center justify-center gap-3 cursor-pointer"
+                      className="w-full bg-gradient-to-r from-[#fbbf24] to-[#f97316] hover:opacity-95 active:scale-[0.99] text-black font-extrabold py-4 sm:py-5 px-8 rounded-2xl transition-all shadow-md text-base sm:text-lg flex items-center justify-center gap-3 cursor-pointer"
                     >
-                      <Mic className="w-5 h-5 text-black shrink-0" />
+                      <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-black shrink-0" />
                       <span>Start Interview</span>
                     </button>
 
-                    <div className="flex justify-center">
+                    <div className="flex justify-center pt-1">
                       <button
                         onClick={() => generateQuestion()}
                         disabled={isGeneratingQ}
-                        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors py-2 px-4 rounded-xl hover:bg-slate-100 cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors py-2 px-4 rounded-xl hover:bg-slate-100 cursor-pointer disabled:opacity-50"
                       >
-                        <Shuffle className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Try Another</span>
+                        <Shuffle className="w-4 h-4 text-slate-400" />
+                        <span>Try Another Question</span>
                       </button>
                     </div>
                   </div>
@@ -1642,6 +1788,142 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
                 {activeScenario.actualQuestion}
               </h2>
             </div>
+
+            {/* ========================================================================= */}
+            {/* 0. HERO: YOUR STAR REVIEW & COACHING ACTION (THE LEARNING LOOP) */}
+            {/* ========================================================================= */}
+            {(() => {
+              const { strongPillar, strongSummary, weakPillar, weakSummary, weakAdvice, scores } = getPillarAnalysis();
+              return (
+                <div className="bg-white border border-slate-200/90 p-6 sm:p-7 rounded-3xl shadow-sm space-y-5 relative overflow-hidden bg-gradient-to-b from-amber-50/15 to-white">
+                  {/* Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#f97316] animate-pulse"></span>
+                        <span className="text-[10px] font-black tracking-widest text-[#f97316] uppercase">
+                          YOUR STAR REVIEW
+                        </span>
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">
+                        Performance Review &amp; Coaching Focus
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="px-3.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">Score</span>
+                        <span className="text-lg font-black text-slate-900">{analysis.overallScore ?? 8}</span>
+                        <span className="text-xs text-slate-400">/10</span>
+                      </div>
+                      {scorecardData?.overallScore && (
+                        <div className="px-3.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-[#f97316] uppercase">Match</span>
+                          <span className="text-lg font-black text-[#f97316]">{scorecardData.overallScore}%</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Strong vs Improve Callouts */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 flex items-start gap-2.5">
+                      <div className="p-1 rounded-md bg-emerald-100 text-emerald-700 shrink-0 mt-0.5">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                      <div className="text-xs leading-relaxed">
+                        <strong className="text-emerald-950 font-black block text-sm">
+                          Strong: {strongPillar}
+                        </strong>
+                        <span className="text-emerald-800 font-medium">{strongSummary}</span>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300 ring-1 ring-amber-400/20 flex items-start gap-2.5">
+                      <div className="p-1 rounded-md bg-amber-100 text-[#f97316] shrink-0 mt-0.5">
+                        <Target className="w-4 h-4" />
+                      </div>
+                      <div className="text-xs leading-relaxed">
+                        <strong className="text-amber-950 font-black block text-sm">
+                          Improve: {weakPillar}
+                        </strong>
+                        <span className="text-amber-900 font-medium">{weakSummary}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* STAR Coverage Progress Bars */}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-700">
+                        STAR Coverage
+                      </span>
+                      <span className="text-[11px] font-mono text-slate-400">Target allocation vs your response</span>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 sm:p-4 space-y-2.5">
+                      {scores.map((pillar) => {
+                        const isFocusAction = pillar.name === 'Action';
+                        const filledBlocks = Math.min(10, Math.max(1, pillar.barCount));
+                        return (
+                          <div key={pillar.name} className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className={`font-bold flex items-center gap-1.5 ${isFocusAction ? 'text-amber-950 font-black' : 'text-slate-700'}`}>
+                                {isFocusAction && <span className="text-[#f97316]">⭐</span>}
+                                <span>{pillar.name}</span>
+                                <span className="text-[10px] font-mono font-normal text-slate-400">({pillar.target})</span>
+                              </span>
+                              <div className="flex items-center gap-2 font-mono text-xs">
+                                <span className="text-[11px] text-slate-500 font-sans hidden sm:inline">{pillar.desc}</span>
+                                <span className={`font-bold ${isFocusAction ? 'text-[#f97316]' : 'text-slate-800'}`}>
+                                  {pillar.score}/10
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Segmented bar representation */}
+                            <div className="w-full bg-slate-200/90 h-2 rounded-full overflow-hidden flex gap-0.5 p-0.5 bg-slate-200">
+                              {Array.from({ length: 10 }).map((_, i) => (
+                                <div
+                                  key={i}
+                                  className={`h-full flex-1 rounded-xs transition-all ${
+                                    i < filledBlocks
+                                      ? isFocusAction
+                                        ? 'bg-[#f97316]'
+                                        : pillar.color
+                                      : 'bg-slate-300/40'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Quick Actions: [ Improve My Answer ] [ Try Again with Focus ] */}
+                  <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
+                    <button
+                      onClick={handleImproveAnswer}
+                      disabled={isImproving}
+                      className="w-full sm:flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold py-3 px-5 rounded-xl transition-all shadow-sm text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-98"
+                    >
+                      <Sparkles className="w-4 h-4 text-white" />
+                      <span>{isImproving ? "Structuring Exemplary Answer..." : "Improve My Answer"}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleRetryWithFocus(weakPillar, weakAdvice)}
+                      className="w-full sm:w-auto bg-gradient-to-r from-[#fbbf24] to-[#f97316] hover:opacity-95 text-black font-extrabold py-3 px-6 rounded-xl transition-all shadow-sm text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                    >
+                      <RotateCcw className="w-4 h-4 text-black" />
+                      <span>Try Again with Focus</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ========================================================================= */}
             {/* 1. STAR PERFORMANCE (How did I perform?) */}
@@ -2053,13 +2335,27 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
                   setImprovedAnswer(null);
                   setTranscript('');
                   setActiveScenario(null);
+                  setRetryFocusBanner(null);
                   generateQuestion();
                 }}
-                className="w-full sm:flex-1 bg-gradient-to-r from-[#fbbf24] to-[#f97316] text-black font-extrabold hover:opacity-90 py-4 px-6 rounded-2xl transition-all shadow-md text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                className="w-full sm:flex-1 bg-gradient-to-r from-[#fbbf24] to-[#f97316] text-black font-extrabold hover:opacity-90 py-3.5 px-6 rounded-2xl transition-all shadow-md text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-98"
               >
-                <RotateCcw className="w-4 h-4 text-black" />
-                <span>Practice Another Behavioral Scenario</span>
+                <Shuffle className="w-4 h-4 text-black" />
+                <span>Next Scenario</span>
               </button>
+
+              {(() => {
+                const { weakPillar, weakAdvice } = getPillarAnalysis();
+                return (
+                  <button
+                    onClick={() => handleRetryWithFocus(weakPillar, weakAdvice)}
+                    className="w-full sm:flex-1 bg-amber-50 hover:bg-amber-100/80 border border-amber-300 text-amber-950 font-extrabold py-3.5 px-6 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-98"
+                  >
+                    <Target className="w-4 h-4 text-[#f97316]" />
+                    <span>Try Again with Focus ({weakPillar})</span>
+                  </button>
+                );
+              })()}
 
               <button
                 onClick={() => {
@@ -2073,10 +2369,10 @@ Also write a perfect 'Model Answer' story as if a top-tier student is answering 
                   setIsPreparing(false);
                   startRecording();
                 }}
-                className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold py-4 px-6 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold py-3.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-xs"
               >
-                <Mic className="w-4 h-4 text-[#f97316]" />
-                <span>Re-record This Question</span>
+                <Mic className="w-4 h-4 text-slate-500" />
+                <span>Re-record Clean</span>
               </button>
             </div>
           </div>

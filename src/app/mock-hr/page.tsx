@@ -13,6 +13,57 @@ interface ChatMessage {
   timestamp: string;
 }
 
+const INTERVIEW_ROLES = [
+  {
+    id: 'SoftwareEngineers',
+    title: 'Software Engineering & DSA',
+    badge: 'Coding & Algorithms',
+    desc: 'Core CS concepts, data structures, and algorithmic problem-solving.'
+  },
+  {
+    id: 'FrontendUI',
+    title: 'UI/UX & Frontend Architecture',
+    badge: 'Design & Web',
+    desc: 'Product design, React, CSS systems & client web performance.'
+  },
+  {
+    id: 'GeneralCampusPlacement',
+    title: 'General Campus Placement',
+    badge: 'HR & Behavioral',
+    desc: 'Standard HR behavioral questions, background & corporate fit.'
+  },
+  {
+    id: 'SystemDesign',
+    title: 'System Design & Leadership',
+    badge: 'System & Leadership',
+    desc: 'Scalable architecture trade-offs, system design & team scenarios.'
+  }
+];
+
+const INTERVIEW_PERSONAS = [
+  {
+    id: 'friendly',
+    title: 'Friendly',
+    roleTag: 'Standard HR',
+    badge: 'Conversational',
+    desc: 'Conversational pace & standard intro questions'
+  },
+  {
+    id: 'balanced',
+    title: 'Balanced',
+    roleTag: 'Tech Lead',
+    badge: 'Probing',
+    desc: 'Probing follow-ups & requests concrete examples'
+  },
+  {
+    id: 'strict',
+    title: 'Strict',
+    roleTag: 'Stress Interview',
+    badge: 'Challenging',
+    desc: 'Flags vague answers & challenges trade-offs aggressively'
+  }
+];
+
 export default function MockHRPage() {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -592,8 +643,8 @@ export default function MockHRPage() {
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-purple-500/30">
       
       {/* Top Header Navigation */}
-      <header className="border-b border-slate-100 bg-white sticky top-0 z-40 px-4 sm:px-6 py-3">
-        <div className="max-w-[720px] mx-auto flex items-center justify-between gap-4">
+      <header className="border-b border-slate-100 bg-white sticky top-0 z-40 px-4 sm:px-6 lg:px-8 py-3.5">
+        <div className="max-w-[1080px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-purple-50 border border-purple-200/80 flex items-center justify-center shrink-0">
               <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
@@ -606,50 +657,50 @@ export default function MockHRPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setShowSetupModal(true)}
-              className="text-[11px] font-bold text-slate-700 bg-slate-100/80 hover:bg-slate-200/80 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-slate-700 bg-slate-100/80 hover:bg-slate-200/80 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
               <span className={`w-1.5 h-1.5 rounded-full ${apiKey ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
               <span>{apiKey ? 'API Connected' : 'Setup API'}</span>
             </button>
             <button
               onClick={() => setShowSetupModal(true)}
-              className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200/80 px-2 py-1 rounded-lg transition-all cursor-pointer"
+              className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200/80 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
             >
               Edit
             </button>
             <a
               href="/jam"
-              className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200/80 px-2 py-1 rounded-lg transition-all cursor-pointer"
+              className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200/80 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
             >
               JAM
             </a>
             <a
               href="/behavioral"
-              className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200/80 px-2 py-1 rounded-lg transition-all cursor-pointer"
+              className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200/80 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
             >
               STAR Coach
             </a>
             <a
               href="/analytics"
-              className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200/80 px-2 py-1 rounded-lg transition-all cursor-pointer"
+              className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200/80 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
             >
               Analytics
             </a>
             <a
               href="/"
-              className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200/80 px-2 py-1 rounded-lg transition-all cursor-pointer"
+              className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200/80 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
             >
-              Suite Home
+              Suite
             </a>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <div className="flex-1 max-w-[680px] w-full mx-auto p-4 sm:p-5 my-1">
+      <div className="flex-1 max-w-[1060px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 space-y-8 sm:space-y-10">
 
         {showSetupModal && (
           <ApiOnboarding
@@ -662,148 +713,192 @@ export default function MockHRPage() {
           />
         )}
 
-        {/* SETUP SCREEN */}
+        {/* SETUP SCREEN (SPACIOUS, OPEN & PROFESSIONAL SETUP ROOM) */}
         {!isInterviewActive && !evaluation && !isEvaluating && (
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 space-y-5 shadow-xs">
+          <div className="space-y-8 sm:space-y-10">
             
-            {/* CARD HEADER */}
-            <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-100">
+            {/* 0. Section Header / Intro Area */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 sm:pb-6">
               <div>
-                <h2 className="text-base font-extrabold text-slate-900">Interview Configuration Hub</h2>
-                <p className="text-[11px] text-slate-500 mt-0.5">Calibrate target domain, interviewer strictness, and hardware audio checks.</p>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse shrink-0"></span>
+                  <span className="text-xs font-black tracking-widest text-purple-700 uppercase">
+                    INTERVIEW SETUP ROOM
+                  </span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+                  Choose Your Practice Interview
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
+                  Select target domain, calibrate interviewer style, and verify audio before entering.
+                </p>
               </div>
-              <span className="shrink-0 bg-purple-50 text-purple-700 border border-purple-200/80 text-[10px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1">
+
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200/80 text-xs font-bold text-purple-700 self-start sm:self-auto shrink-0 shadow-2xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
-                Interactive 2-Way Speech
-              </span>
+                <span>Interactive 2-Way Speech</span>
+              </div>
             </div>
 
             {micError && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-xl text-xs space-y-1">
-                <div className="font-bold flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-xs sm:text-sm space-y-1">
+                <div className="font-bold flex items-center gap-2">
+                  <svg className="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                   </svg>
                   <span>Microphone Notice</span>
                 </div>
-                <p className="text-[11px]">{micError}</p>
+                <p className="text-xs text-rose-700">{micError}</p>
               </div>
             )}
 
-            {/* 1. TARGET ROLE & DOMAIN */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
-                1. TARGET ROLE & DOMAIN
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {[
-                  {
-                    id: 'SoftwareEngineers',
-                    title: 'Software Engineering & DSA',
-                    desc: 'Core CS concepts, data structures, and algorithmic problem-solving.'
-                  },
-                  {
-                    id: 'FrontendUI',
-                    title: 'UI/UX & Frontend Architecture',
-                    desc: 'Product design, React, CSS systems & client web performance.'
-                  },
-                  {
-                    id: 'GeneralCampusPlacement',
-                    title: 'General Campus Placement',
-                    desc: 'Standard HR behavioral questions, background & corporate fit.'
-                  },
-                  {
-                    id: 'SystemDesign',
-                    title: 'System Design & Leadership',
-                    desc: 'Scalable architecture trade-offs, system design & team scenarios.'
-                  }
-                ].map((role) => (
-                  <button
-                    key={role.id}
-                    onClick={() => setJobRole(role.id)}
-                    className={`p-3 text-left rounded-xl border transition-all cursor-pointer ${
-                      jobRole === role.id
-                        ? 'border-purple-600 bg-purple-50/50 shadow-2xs'
-                        : 'border-slate-200/80 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900">{role.title}</span>
-                      {jobRole === role.id && (
-                        <span className="w-2 h-2 rounded-full bg-purple-600 shrink-0"></span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-slate-500 leading-snug mt-0.5">{role.desc}</p>
-                  </button>
-                ))}
+            {/* 1. TARGET ROLE & DOMAIN (2x2 on Desktop, 1-col on Mobile) */}
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">
+                  1. Target Role &amp; Domain
+                </label>
+                <span className="text-xs font-mono text-slate-400 hidden sm:inline">4 Placement Tracks</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4.5">
+                {INTERVIEW_ROLES.map((role) => {
+                  const isSelected = jobRole === role.id;
+                  return (
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => setJobRole(role.id)}
+                      className={`p-5 sm:p-6 text-left rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                        isSelected
+                          ? 'border-purple-500/80 bg-purple-50/50 shadow-xs ring-1 ring-purple-500/20'
+                          : 'border-slate-200/80 hover:border-slate-300 bg-white hover:bg-slate-50/40 shadow-2xs'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <span className="text-sm sm:text-base font-extrabold text-slate-900 block leading-snug">
+                            {role.title}
+                          </span>
+                          <span className="text-[11px] font-mono font-medium text-slate-400 block">
+                            {role.badge}
+                          </span>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                          isSelected
+                            ? 'border-purple-600 bg-purple-600 text-white'
+                            : 'border-slate-300 bg-white'
+                        }`}>
+                          {isSelected && (
+                            <svg className="w-3 h-3 stroke-current stroke-[3]" fill="none" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                        {role.desc}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* 2. RECRUITER STRICTNESS & PERSONA */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
-                2. RECRUITER STRICTNESS & PERSONA
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {[
-                  {
-                    id: 'friendly',
-                    title: 'Friendly (Standard HR)',
-                    desc: 'Conversational pace & standard intro questions'
-                  },
-                  {
-                    id: 'balanced',
-                    title: 'Balanced (Tech Lead)',
-                    desc: 'Probing follow-ups & requests concrete examples'
-                  },
-                  {
-                    id: 'strict',
-                    title: 'Strict (Stress Interview)',
-                    desc: 'Flags vague answers & challenges trade-offs aggressively'
-                  }
-                ].map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setPersona(p.id as any)}
-                    className={`p-3 text-left rounded-xl border transition-all cursor-pointer ${
-                      persona === p.id
-                        ? 'border-purple-600 bg-purple-50/50 shadow-2xs'
-                        : 'border-slate-200/80 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-xs font-bold text-slate-900">{p.title}</span>
-                      {persona === p.id && (
-                        <span className="w-2 h-2 rounded-full bg-purple-600 shrink-0"></span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-slate-500 leading-snug">{p.desc}</p>
-                  </button>
-                ))}
+            {/* 2. RECRUITER STRICTNESS & PERSONA (3 in a row on Desktop, Stack/Wrap on Mobile) */}
+            <div className="space-y-3.5">
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">
+                  2. Recruiter Strictness &amp; Persona
+                </label>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">
+                  How challenging should the interviewer feel?
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+                {INTERVIEW_PERSONAS.map((p) => {
+                  const isSelected = persona === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setPersona(p.id as any)}
+                      className={`p-4 sm:p-5 text-left rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                        isSelected
+                          ? 'border-purple-500/80 bg-purple-50/50 shadow-xs ring-1 ring-purple-500/20'
+                          : 'border-slate-200/80 hover:border-slate-300 bg-white hover:bg-slate-50/40 shadow-2xs'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-xs sm:text-sm font-extrabold text-slate-900 block">
+                            {p.title}
+                          </span>
+                          <span className="text-[11px] font-medium text-slate-500">
+                            ({p.roleTag})
+                          </span>
+                        </div>
+                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                          isSelected ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {p.badge}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        {p.desc}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* 3. AUDIO PRE-FLIGHT CHECK */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
-                3. AUDIO PRE-FLIGHT CHECK
+            {/* 3. AUDIO PRE-FLIGHT CHECK (Clean Horizontal Status Bar) */}
+            <div className="space-y-2.5">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">
+                3. Audio Pre-Flight Check
               </label>
-              <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    Mic Ready
-                  </span>
-                  <div className="flex items-center gap-0.5 h-3">
-                    <span className="w-0.5 h-2 bg-purple-600 rounded-full animate-pulse"></span>
-                    <span className="w-0.5 h-3 bg-purple-600 rounded-full animate-pulse [animation-delay:-0.2s]"></span>
-                    <span className="w-0.5 h-1.5 bg-purple-600 rounded-full animate-pulse [animation-delay:-0.4s]"></span>
-                    <span className="w-0.5 h-2.5 bg-purple-600 rounded-full animate-pulse [animation-delay:-0.1s]"></span>
+              <div className="bg-slate-50/80 border border-slate-200/70 rounded-2xl p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+                  {/* Microphone Status */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">🎙</span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-800">
+                      Microphone
+                    </span>
+                    <span className="text-slate-300">·</span>
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Ready
+                    </span>
+                    <div className="flex items-center gap-0.5 h-3 ml-1">
+                      <span className="w-0.5 h-2 bg-purple-600 rounded-full animate-pulse"></span>
+                      <span className="w-0.5 h-3 bg-purple-600 rounded-full animate-pulse [animation-delay:-0.2s]"></span>
+                      <span className="w-0.5 h-1.5 bg-purple-600 rounded-full animate-pulse [animation-delay:-0.4s]"></span>
+                      <span className="w-0.5 h-2.5 bg-purple-600 rounded-full animate-pulse [animation-delay:-0.1s]"></span>
+                    </div>
+                  </div>
+
+                  <span className="text-slate-300 hidden sm:inline">|</span>
+
+                  {/* Speaker Status */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">🔊</span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-800">
+                      Speaker
+                    </span>
+                    <span className="text-slate-300">·</span>
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Ready
+                    </span>
                   </div>
                 </div>
+
                 <button
                   onClick={testAudioPlayback}
-                  className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+                  className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/80 text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs shrink-0 active:scale-98"
                 >
                   <svg className="w-3.5 h-3.5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
@@ -813,16 +908,54 @@ export default function MockHRPage() {
               </div>
             </div>
 
-            {/* LAUNCH BUTTON */}
-            <div className="pt-1 space-y-1.5 text-center">
-              <button
-                onClick={startInterview}
-                className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 active:scale-[0.99] text-white font-extrabold rounded-xl transition-all text-xs sm:text-sm shadow-xs cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>🚀 Launch Interactive 2-Way Interview</span>
-              </button>
-              <p className="text-[11px] text-slate-400">Ensure headphones are connected for optimal two-way conversation.</p>
-            </div>
+            {/* 4. DYNAMIC SUMMARY & LAUNCH CTA */}
+            {(() => {
+              const selectedRole = INTERVIEW_ROLES.find(r => r.id === jobRole) || INTERVIEW_ROLES[2];
+              const selectedPersona = INTERVIEW_PERSONAS.find(p => p.id === persona) || INTERVIEW_PERSONAS[1];
+              return (
+                <div className="space-y-4 pt-2">
+                  {/* Dynamic Summary Strip */}
+                  <div className="bg-purple-50/50 border border-purple-100/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-purple-700">
+                          YOUR INTERVIEW
+                        </span>
+                        <span className="text-slate-300">·</span>
+                        <span className="text-xs sm:text-sm font-bold text-slate-900">
+                          {selectedRole.title}
+                        </span>
+                        <span className="text-slate-300">·</span>
+                        <span className="text-xs sm:text-sm font-semibold text-purple-900">
+                          {selectedPersona.title} ({selectedPersona.roleTag})
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Interactive 2-way voice · AI follow-ups &amp; real-time conversational evaluation
+                      </p>
+                    </div>
+
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white border border-purple-200/80 text-xs font-bold text-purple-700 shrink-0 self-start sm:self-auto shadow-2xs">
+                      <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
+                      <span>🎙 Interactive 2-Way Voice</span>
+                    </div>
+                  </div>
+
+                  {/* Launch CTA */}
+                  <div className="space-y-2.5 text-center pt-2">
+                    <button
+                      onClick={startInterview}
+                      className="w-full py-4 sm:py-5 px-8 bg-purple-600 hover:bg-purple-700 active:scale-[0.99] text-white font-extrabold rounded-2xl transition-all text-base sm:text-lg shadow-sm shadow-purple-500/20 cursor-pointer flex items-center justify-center gap-2.5"
+                    >
+                      <span>🚀 Launch Interactive 2-Way Interview</span>
+                    </button>
+                    <p className="text-xs text-slate-400 font-medium">
+                      Ensure headphones or speakers are active for the best conversational experience.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
 
           </div>
         )}
@@ -1082,7 +1215,7 @@ export default function MockHRPage() {
       </div>
 
       {/* Footer */}
-      <footer className="w-full max-w-4xl mx-auto py-8 flex justify-center mt-12 text-center shrink-0">
+      <footer className="w-full max-w-[1080px] mx-auto py-8 px-4 flex justify-center mt-12 text-center shrink-0 border-t border-slate-100">
         <p className="text-slate-400 text-xs tracking-wider uppercase font-semibold">
           Placement Intelligence Suite • AI Mock Interview
         </p>

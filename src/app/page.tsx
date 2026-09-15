@@ -95,9 +95,6 @@ export default function WelcomePage() {
                   aria-expanded={aboutDropdownOpen}
                 >
                   <span>About Us</span>
-                  <span className="text-xs transition-transform duration-200">
-                    {aboutDropdownOpen ? '↑' : '↓'}
-                  </span>
                 </button>
 
                 {/* About Us Dropdown Panel */}
@@ -153,9 +150,6 @@ export default function WelcomePage() {
                   aria-expanded={featuresDropdownOpen}
                 >
                   <span>Features</span>
-                  <span className="text-xs transition-transform duration-200">
-                    {featuresDropdownOpen ? '↑' : '↓'}
-                  </span>
                 </button>
 
                 {/* Dropdown Panel */}
@@ -268,9 +262,6 @@ export default function WelcomePage() {
                   aria-expanded={howItWorksDropdownOpen}
                 >
                   <span>How It Works</span>
-                  <span className="text-xs transition-transform duration-200">
-                    {howItWorksDropdownOpen ? '↑' : '↓'}
-                  </span>
                 </button>
 
                 {/* How It Works Dropdown Panel */}
@@ -501,7 +492,6 @@ export default function WelcomePage() {
                 className="w-full flex items-center justify-between text-lg font-medium text-zinc-900 hover:text-black focus:outline-none"
               >
                 <span>About Us</span>
-                <span className="text-sm font-bold">{mobileAboutOpen ? '↑' : '↓'}</span>
               </button>
 
               {mobileAboutOpen && (
@@ -535,7 +525,6 @@ export default function WelcomePage() {
                 className="w-full flex items-center justify-between text-lg font-medium text-zinc-900 hover:text-black focus:outline-none"
               >
                 <span>Features</span>
-                <span className="text-sm font-bold">{mobileFeaturesOpen ? '↑' : '↓'}</span>
               </button>
 
               {mobileFeaturesOpen && (
@@ -611,7 +600,6 @@ export default function WelcomePage() {
                 className="w-full flex items-center justify-between text-lg font-medium text-zinc-900 hover:text-black focus:outline-none"
               >
                 <span>How It Works</span>
-                <span className="text-sm font-bold">{mobileHowItWorksOpen ? '↑' : '↓'}</span>
               </button>
 
               {mobileHowItWorksOpen && (
