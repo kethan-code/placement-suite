@@ -15,6 +15,11 @@ import {
   JAM_SELECTED_TRACK_STORAGE_KEY,
   JAM_SELECTED_DIFF_STORAGE_KEY
 } from '@/lib/jamChallengeGenerator';
+import {
+  getOfficialDailyJam,
+  getDailyShuffleOptions,
+  TodayJamChallenge
+} from '@/lib/dailyJamManager';
 import { 
   Mic, 
   Square, 
@@ -67,33 +72,6 @@ interface AnalysisResult {
   improvedSampleSnippet: string;
 }
 
-const TODAYS_JAM_POOL = [
-  {
-    topic: "Should college students prioritize internships over academic grades?",
-    category: "Campus & Placement",
-    difficulty: "Medium",
-    time: "60 sec"
-  },
-  {
-    topic: "Should AI be allowed to make hiring and placement decisions?",
-    category: "Tech & Innovation",
-    difficulty: "Medium",
-    time: "60 sec"
-  },
-  {
-    topic: "Is competition or collaboration the true driver of modern innovation?",
-    category: "Abstract & Logic",
-    difficulty: "Hard",
-    time: "60 sec"
-  },
-  {
-    topic: "Can authentic leadership be taught, or is it an innate personality trait?",
-    category: "Personal & Behavioral",
-    difficulty: "Medium",
-    time: "60 sec"
-  }
-];
-
 export default function JamSimulatorPage() {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -101,7 +79,8 @@ export default function JamSimulatorPage() {
   const [topic, setTopic] = useState('');
   const [topicDetails, setTopicDetails] = useState<{ track: string; difficulty: string; hint?: string } | null>(null);
   const [isGeneratingAnother, setIsGeneratingAnother] = useState(false);
-  const [todayIndex, setTodayIndex] = useState(0);
+  const [dailyJam, setDailyJam] = useState<TodayJamChallenge>(() => getOfficialDailyJam());
+  const [shuffleIndex, setShuffleIndex] = useState(0);
 
   const [isRecording, setIsRecording] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
@@ -130,6 +109,31 @@ export default function JamSimulatorPage() {
     const key = getGeminiApiKey();
     if (key) setApiKey(key);
 
+    // Refresh official daily challenge based on current calendar day
+    const official = getOfficialDailyJam();
+    setDailyJam(official);
+    setShuffleIndex(0);
+
+    // Automatically detect calendar day roll-over if the page is kept open across midnight
+    const syncDailyJam = () => {
+      const currentOfficial = getOfficialDailyJam();
+      setDailyJam((prev) => {
+        if (prev.topic !== currentOfficial.topic) {
+          setShuffleIndex(0);
+          return currentOfficial;
+        }
+        return prev;
+      });
+    };
+
+    window.addEventListener('focus', syncDailyJam);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        syncDailyJam();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
     // Restore persisted active challenge across page refreshes
     const persisted = getPersistedActiveJamChallenge();
     if (persisted && persisted.topic) {
@@ -137,14 +141,26 @@ export default function JamSimulatorPage() {
       setTopicDetails(persisted.details);
     }
 
-    const storedHistory = localStorage.getItem('app_score_history');
-    if (storedHistory) {
+    const syncHistoryFromStorage = () => {
       try {
-        setHistory(JSON.parse(storedHistory));
+        const storedHistory = localStorage.getItem('app_score_history');
+        if (storedHistory) {
+          setHistory(JSON.parse(storedHistory));
+        } else {
+          setHistory([]);
+        }
       } catch (e) {
         console.error("Failed to parse history", e);
+        setHistory([]);
       }
-    }
+    };
+
+    syncHistoryFromStorage();
+
+    window.addEventListener('storage', syncHistoryFromStorage);
+    window.addEventListener('focus', syncHistoryFromStorage);
+    window.addEventListener('jam_score_history_cleared', syncHistoryFromStorage);
+    window.addEventListener('practice_history_cleared', syncHistoryFromStorage);
 
     const syncKey = () => {
       setApiKey(getGeminiApiKey());
@@ -152,6 +168,12 @@ export default function JamSimulatorPage() {
     window.addEventListener('gemini_api_key_updated', syncKey);
 
     return () => {
+      window.removeEventListener('focus', syncDailyJam);
+      window.removeEventListener('focus', syncHistoryFromStorage);
+      window.removeEventListener('storage', syncHistoryFromStorage);
+      window.removeEventListener('jam_score_history_cleared', syncHistoryFromStorage);
+      window.removeEventListener('practice_history_cleared', syncHistoryFromStorage);
+      document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('gemini_api_key_updated', syncKey);
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
@@ -466,18 +488,61 @@ export default function JamSimulatorPage() {
   const strokeDashoffset = circumference * (1 - timeLeft / 60);
 
   // Performance snapshots calculations
-  const totalCompleted = history.length > 0 ? history.length : 0;
+  const totalCompleted = history.length;
   const avgScore = history.length > 0
     ? (history.reduce((sum, h) => sum + h.overallScore, 0) / history.length).toFixed(1)
-    : '0.0';
+    : '—';
   const bestScore = history.length > 0
     ? Math.max(...history.map((h) => h.overallScore)).toFixed(1)
-    : '0.0';
+    : '—';
+
+  // Dynamic Skill Metrics derived directly from recorded sessions
+  const toPct = (val: number | undefined | null, fallback: number = 0): number => {
+    const num = typeof val === 'number' && !isNaN(val) ? val : fallback;
+    if (num <= 0) return 0;
+    if (num <= 10) return Math.min(Math.round(num * 10), 100);
+    return Math.min(Math.round(num), 100);
+  };
+
+  const skillMetrics = history.length === 0
+    ? [
+        { label: 'Speaking & Fluency', pct: null as number | null, color: 'bg-blue-600' },
+        { label: 'Argument Structure', pct: null as number | null, color: 'bg-indigo-600' },
+        { label: 'Clarity & Vocabulary', pct: null as number | null, color: 'bg-emerald-600' },
+        { label: 'Confidence & Delivery', pct: null as number | null, color: 'bg-amber-500' }
+      ]
+    : [
+        {
+          label: 'Speaking & Fluency',
+          pct: Math.round(history.reduce((sum, h) => sum + toPct(h.scores?.fluency, h.overallScore), 0) / history.length),
+          color: 'bg-blue-600'
+        },
+        {
+          label: 'Argument Structure',
+          pct: Math.round(history.reduce((sum, h) => sum + toPct(h.scores?.relevance, h.overallScore), 0) / history.length),
+          color: 'bg-indigo-600'
+        },
+        {
+          label: 'Clarity & Vocabulary',
+          pct: Math.round(history.reduce((sum, h) => {
+            const vocab = toPct(h.scores?.vocabulary, h.overallScore);
+            const gram = toPct(h.scores?.grammar, vocab);
+            return sum + Math.round((vocab + gram) / 2);
+          }, 0) / history.length),
+          color: 'bg-emerald-600'
+        },
+        {
+          label: 'Confidence & Delivery',
+          pct: Math.round(history.reduce((sum, h) => sum + toPct(h.overallScore), 0) / history.length),
+          color: 'bg-amber-500'
+        }
+      ];
 
   // Real latest completed JAM session info (null if no previous attempt recorded)
   const lastJam = history.length > 0 ? history[0] : null;
 
-  const currentTodayChallenge = TODAYS_JAM_POOL[todayIndex];
+  const shuffleOptions = getDailyShuffleOptions(dailyJam);
+  const currentTodayChallenge = shuffleOptions[shuffleIndex % shuffleOptions.length] || dailyJam;
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans relative w-full flex flex-col">
@@ -683,7 +748,7 @@ export default function JamSimulatorPage() {
                           updateActiveChallenge(currentTodayChallenge.topic, {
                             track: currentTodayChallenge.category,
                             difficulty: currentTodayChallenge.difficulty as any,
-                            hint: "Take a clear stance in the first 10 seconds. Substantiate with 2 practical arguments."
+                            hint: currentTodayChallenge.hint || "Take a clear stance in the first 10 seconds. Substantiate with 2 practical arguments."
                           });
                         }}
                         className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-sm py-3 px-5 rounded-xl sm:rounded-2xl transition-all shadow-sm shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-2"
@@ -693,7 +758,7 @@ export default function JamSimulatorPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setTodayIndex((prev) => (prev + 1) % TODAYS_JAM_POOL.length)}
+                        onClick={() => setShuffleIndex((prev) => (prev + 1) % shuffleOptions.length)}
                         title="Shuffle next daily topic"
                         className="w-full sm:w-auto py-2.5 px-3 sm:p-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl sm:rounded-2xl transition-all shadow-2xs cursor-pointer flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold sm:font-normal"
                       >
@@ -926,21 +991,18 @@ export default function JamSimulatorPage() {
 
                       {/* SKILL PROGRESS BARS */}
                       <div className="space-y-3 pt-1">
-                        {[
-                          { label: 'Speaking & Fluency', pct: 82, color: 'bg-blue-600' },
-                          { label: 'Argument Structure', pct: 74, color: 'bg-indigo-600' },
-                          { label: 'Clarity & Vocabulary', pct: 87, color: 'bg-emerald-600' },
-                          { label: 'Confidence & Delivery', pct: 80, color: 'bg-amber-500' }
-                        ].map((skill, idx) => (
+                        {skillMetrics.map((skill, idx) => (
                           <div key={idx} className="space-y-1">
                             <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                               <span>{skill.label}</span>
-                              <span className="font-mono text-slate-900 text-[11px]">{skill.pct}%</span>
+                              <span className="font-mono text-slate-900 text-[11px]">
+                                {skill.pct !== null ? `${skill.pct}%` : '—'}
+                              </span>
                             </div>
                             <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                               <div 
                                 className={`h-full rounded-full ${skill.color} transition-all duration-500`}
-                                style={{ width: `${skill.pct}%` }}
+                                style={{ width: `${skill.pct ?? 0}%` }}
                               />
                             </div>
                           </div>
@@ -1312,8 +1374,8 @@ export default function JamSimulatorPage() {
               <div className="bg-white border border-slate-200/90 p-6 sm:p-8 rounded-3xl shadow-xs text-center">
                 <span className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">Average Score</span>
                 <div className="text-5xl font-black text-blue-600 font-mono mt-3">
-                  {history.length > 0 ? (history.reduce((sum, h) => sum + h.overallScore, 0) / history.length).toFixed(1) : '0.0'}
-                  <span className="text-xl text-slate-400 font-sans">/10</span>
+                  {avgScore}
+                  {history.length > 0 && <span className="text-xl text-slate-400 font-sans">/10</span>}
                 </div>
               </div>
               <div className="bg-white border border-slate-200/90 p-6 sm:p-8 rounded-3xl shadow-xs text-center">
@@ -1336,6 +1398,11 @@ export default function JamSimulatorPage() {
                       if (confirm("Clear your JAM speech history?")) { 
                         setHistory([]); 
                         localStorage.removeItem('app_score_history'); 
+                        localStorage.removeItem('jam_master_deck_history_v2');
+                        localStorage.removeItem('jam_master_deck_needs_rotation');
+                        window.dispatchEvent(new CustomEvent('jam_score_history_cleared'));
+                        window.dispatchEvent(new CustomEvent('practice_history_cleared'));
+                        window.dispatchEvent(new Event('storage'));
                       } 
                     }} 
                     className="text-xs text-rose-600 hover:text-rose-700 font-bold cursor-pointer transition-colors"
