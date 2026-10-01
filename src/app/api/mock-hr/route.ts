@@ -180,22 +180,95 @@ export async function POST(req: Request) {
 
       // Identify last question asked to candidate
       const qaPairs = extractQAPairs(conversation || []);
-      const latestQuestion = sessionQuestions[sessionQuestions.length - 1] || (qaPairs.length > 0 ? qaPairs[qaPairs.length - 1].question : "Tell me about your background.");
-      const echoCheck = detectQuestionEcho(latestQuestion, candidateAnswer || "");
+      const currentQuestion = sessionQuestions[sessionQuestions.length - 1] || (qaPairs.length > 0 ? qaPairs[qaPairs.length - 1].question : "Tell me about your background.");
+      const transcript = candidateAnswer || "";
+      const echoCheck = detectQuestionEcho(currentQuestion, transcript);
 
-      const systemPrompt = `You are a professional human recruiter conducting a live, interactive 2-way job interview for a candidate applying for: ${jobRoleTitle}.
+      // Intent Classification Prompt (Requirement)
+      const intentSystemPrompt = `
+You are an intent classifier for an interactive HR mock interview.
+Analyze the candidate's transcribed speech in response to the current question:
+Current Question: "${currentQuestion}"
+Candidate Input: "${transcript}"
+
+Determine the candidate's intent:
+1. "CLARIFY": Candidate asks to repeat, clarify, or rephrase the question (e.g., "Can you say that again?", "What do you mean by coursework?").
+2. "PAUSE": Candidate asks for time to think (e.g., "Give me a moment", "Let me think about that").
+3. "ANSWER": Candidate is attempting to answer the question, even if brief or flawed.
+4. "PARROT": Candidate simply echoes or repeats the question back with no content.
+
+Return JSON only:
+{
+  "intent": "CLARIFY" | "PAUSE" | "ANSWER" | "PARROT",
+  "conversationalReply": string | null
+}
+`;
+
+      let classifiedIntent: "CLARIFY" | "PAUSE" | "ANSWER" | "PARROT" = "ANSWER";
+      let intentReply: string | null = null;
+      let modelUsed: string | undefined = undefined;
+
+      try {
+        const intentUserPrompt = `Classify the candidate's intent and provide conversationalReply if applicable. Return JSON only.`;
+        const { text: intentRawText, modelUsed: intentModel } = await callGeminiWithFallback(apiKey, intentSystemPrompt, intentUserPrompt);
+        modelUsed = intentModel;
+        const intentCleaned = cleanJsonResponse(intentRawText);
+        const intentJson = JSON.parse(intentCleaned);
+        if (intentJson.intent && ["CLARIFY", "PAUSE", "ANSWER", "PARROT"].includes(intentJson.intent.toUpperCase())) {
+          classifiedIntent = intentJson.intent.toUpperCase() as "CLARIFY" | "PAUSE" | "ANSWER" | "PARROT";
+          intentReply = intentJson.conversationalReply || null;
+        }
+      } catch (err: any) {
+        console.warn("Intent classification fallback:", err.message);
+        if (echoCheck.isEcho && !echoCheck.hasSubstantiveAnswer) {
+          classifiedIntent = "PARROT";
+        } else if (/^(give me a (moment|sec|second)|let me think|wait a (moment|second)|one second|hold on)\b/i.test(transcript)) {
+          classifiedIntent = "PAUSE";
+          intentReply = "Take your time! Let me know whenever you're ready.";
+        } else if (/^(can you repeat|could you repeat|say that again|repeat the question|what do you mean|pardon|clarify|can you rephrase)\b/i.test(transcript)) {
+          classifiedIntent = "CLARIFY";
+          intentReply = `Certainly! I asked: "${currentQuestion}"`;
+        }
+      }
+
+      // Hard deterministic override if candidate purely echoed the question
+      if (echoCheck.isEcho && !echoCheck.hasSubstantiveAnswer) {
+        classifiedIntent = "PARROT";
+      }
+
+      let resultJson: any = null;
+
+      if (classifiedIntent === "CLARIFY") {
+        resultJson = {
+          intent: "CLARIFY",
+          interviewerReaction: intentReply || "Certainly, let me repeat or clarify the question.",
+          followUpQuestion: currentQuestion,
+          isFinalTurn: false
+        };
+      } else if (classifiedIntent === "PAUSE") {
+        resultJson = {
+          intent: "PAUSE",
+          interviewerReaction: intentReply || "Take your time! Whenever you are ready, please share your thoughts.",
+          followUpQuestion: currentQuestion,
+          isFinalTurn: false
+        };
+      } else if (classifiedIntent === "PARROT") {
+        resultJson = {
+          intent: "PARROT",
+          interviewerReaction: intentReply || "It sounds like you repeated the interview question. I would love to hear your actual thoughts in your own words.",
+          followUpQuestion: "In your own words, what is a specific tool or project you worked on recently?",
+          isFinalTurn: false
+        };
+      } else {
+        const systemPrompt = `You are a professional human recruiter conducting a live, interactive 2-way job interview for a candidate applying for: ${jobRoleTitle}.
 Recruiter Persona: ${personaTone}.
 
 CRITICAL ANSWER-AWARE INTERVIEWING RULES:
 1. ACTIVELY EVALUATE THE CANDIDATE'S LATEST ANSWER:
-   Original Question Asked: "${latestQuestion}"
-   Candidate's Transcribed Answer: "${candidateAnswer || ""}"
+   Original Question Asked: "${currentQuestion}"
+   Candidate's Transcribed Answer: "${transcript}"
 
 2. DETECT ANSWER TYPE AND RESPOND ACCORDINGLY:
-   - PARROT (Question Repeated): If candidate repeated or echoed the question without giving an answer, your reaction MUST politely point out that they repeated the question, e.g.:
-     "It sounds like you repeated the question. Could you give your actual response in your own words?"
-     And your followUpQuestion MUST directly prompt for a concrete answer or skill:
-     "In your own words, what is a specific tool or skill you learned, and how did you use it?"
    - IRRELEVANT (Off-Topic): If the answer has nothing to do with the question, acknowledge and politely redirect them back to the original topic:
      "I see, though let's focus on the question. Could you tell me specifically about your experience with...?"
    - PARTIAL (Too brief or lacking detail): Encourage them to elaborate on specific details:
@@ -215,28 +288,22 @@ Respond ONLY with a valid JSON object matching this schema:
   "isFinalTurn": false
 }`;
 
-      const userPrompt = `ORIGINAL QUESTION ASKED:
-"${latestQuestion}"
+        const userPrompt = `ORIGINAL QUESTION ASKED:
+"${currentQuestion}"
 
 CANDIDATE'S ACTUAL TRANSCRIBED ANSWER:
-"${candidateAnswer}"
+"${transcript}"
 
 FULL TRANSCRIPT SO FAR:
 ${historyFormatted}
 
 Generate the next recruiter turn adhering strictly to the answer evaluation rules above.`;
 
-      const { text: rawText, modelUsed } = await callGeminiWithFallback(apiKey, systemPrompt, userPrompt);
-      const cleaned = cleanJsonResponse(rawText);
-      let resultJson = JSON.parse(cleaned);
-
-      // Deterministic check override if candidate purely echoed the question
-      if (echoCheck.isEcho && !echoCheck.hasSubstantiveAnswer) {
-        resultJson = {
-          interviewerReaction: "It sounds like you repeated the interview question. I would love to hear your actual thoughts in your own words.",
-          followUpQuestion: "In your own words, what is a specific tool or project you worked on recently?",
-          isFinalTurn: false
-        };
+        const { text: rawText, modelUsed: turnModelUsed } = await callGeminiWithFallback(apiKey, systemPrompt, userPrompt);
+        modelUsed = turnModelUsed;
+        const cleaned = cleanJsonResponse(rawText);
+        resultJson = JSON.parse(cleaned);
+        resultJson.intent = "ANSWER";
       }
 
       const spokenText = resultJson.interviewerReaction + " " + resultJson.followUpQuestion;
