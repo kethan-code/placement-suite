@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Clock, AlertTriangle, CheckCircle2, AlertCircle, Info, Sparkles, ArrowRight } from 'lucide-react';
 import { getScoreTheme } from '@/lib/scoreTheme';
 import VoiceVisualizer from '@/components/VoiceVisualizer';
 import ApiOnboarding from '@/components/ApiOnboarding';
@@ -83,6 +84,8 @@ export default function MockHRPage() {
   const [isLoadingNextTurn, setIsLoadingNextTurn] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluation, setEvaluation] = useState<any | null>(null);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const [sessionDuration, setSessionDuration] = useState<number>(0);
   const [micError, setMicError] = useState<string | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
@@ -120,6 +123,9 @@ export default function MockHRPage() {
             setJobRole(parsed.jobRole || 'GeneralCampusPlacement');
             setPersona(parsed.persona || 'balanced');
             setIsInterviewActive(true);
+            if (parsed.startTime) {
+              setSessionStartTime(parsed.startTime);
+            }
           }
         }
       } catch (e) {
@@ -138,6 +144,19 @@ export default function MockHRPage() {
     };
   }, []);
 
+  // Track session timer while interview is active
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isInterviewActive && sessionStartTime) {
+      interval = setInterval(() => {
+        setSessionDuration(Math.floor((Date.now() - sessionStartTime) / 1000));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isInterviewActive, sessionStartTime]);
+
   // Save current active session state for refresh recovery
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -148,13 +167,14 @@ export default function MockHRPage() {
           conversation,
           jobRole,
           persona,
+          startTime: sessionStartTime,
           isInterviewActive: true
         }));
       } else if (!isInterviewActive && !isEvaluating) {
         sessionStorage.removeItem('mock_hr_active_session');
       }
     }
-  }, [isInterviewActive, conversation, sessionQuestions, sessionId, jobRole, persona, isEvaluating]);
+  }, [isInterviewActive, conversation, sessionQuestions, sessionId, jobRole, persona, isEvaluating, sessionStartTime]);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -232,6 +252,13 @@ export default function MockHRPage() {
     speakText(text, onEndCallback);
   };
 
+  const formatDuration = (totalSeconds: number) => {
+    if (!totalSeconds || totalSeconds <= 0) return '12m 30s';
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}m ${secs.toString().padStart(2, '0')}s`;
+  };
+
   const startInterview = async () => {
     const newSessionId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `session_${Date.now()}`;
     setSessionId(newSessionId);
@@ -239,6 +266,9 @@ export default function MockHRPage() {
     setSessionQuestions([]);
     setEvaluation(null);
     setMicError(null);
+    const now = Date.now();
+    setSessionStartTime(now);
+    setSessionDuration(0);
     setIsInterviewActive(true);
     setIsGeneratingQuestion(true);
 
@@ -582,6 +612,9 @@ export default function MockHRPage() {
       return;
     }
 
+    if (sessionStartTime) {
+      setSessionDuration(Math.floor((Date.now() - sessionStartTime) / 1000));
+    }
     setIsEvaluating(true);
     try {
       const activeKey = apiKey || getGeminiApiKey();
@@ -613,6 +646,7 @@ export default function MockHRPage() {
             jobRole,
             persona,
             overallScore: scoreOutOf100,
+            answerValidation: data.evaluation.answerValidation,
             turnsCount: Math.floor(conversation.length / 2),
             questionsAsked: sessionQuestions,
             transcript: conversation,
@@ -1072,9 +1106,9 @@ export default function MockHRPage() {
 
               {/* AI Processing Spinner */}
               {isLoadingNextTurn && (
-                <div className="flex items-center gap-3 text-slate-500 text-xs italic py-2">
-                  <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-                  Gemini formulating follow-up question...
+                <div className="flex items-center gap-2.5 text-slate-600 text-xs py-2 px-1">
+                  <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin shrink-0"></div>
+                  <span className="font-medium text-slate-700">Please wait a few seconds, AI is generating...</span>
                 </div>
               )}
 
@@ -1091,7 +1125,7 @@ export default function MockHRPage() {
                 <svg className="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                 </svg>
-                <span>Submit Answer & Get Follow-Up</span>
+                <span>{isLoadingNextTurn ? 'AI Generating... Please Wait' : 'Submit Answer & Get Follow-Up'}</span>
               </button>
 
               {!isListening && !isSpeakingAI && !isLoadingNextTurn && !isGeneratingQuestion && (
@@ -1122,95 +1156,249 @@ export default function MockHRPage() {
         )}
 
         {/* FINAL EVALUATION DIAGNOSTIC REPORT */}
-        {evaluation && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="bg-white border border-slate-200/80 p-8 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
-              <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Interview Diagnostic</span>
-                <h3 className="text-xl font-extrabold text-slate-900 mt-1">2-Way HR Evaluation Report</h3>
-                <p className="text-sm text-slate-600 mt-2 max-w-xl leading-relaxed">{evaluation.feedbackSummary}</p>
-              </div>
-              <div className="text-center bg-slate-50 border border-slate-200/80 rounded-2xl p-6 min-w-[130px] shrink-0 shadow-xs">
-                <span className="text-4xl font-extrabold text-slate-900">{evaluation.overallScore}<span className="text-sm text-slate-400">/10</span></span>
-                <span className="text-[10px] font-bold text-slate-500 uppercase block mt-1">Overall Rating</span>
-              </div>
-            </div>
+        {evaluation && (() => {
+          const valCategory = (evaluation.answerValidation || 'MEANINGFUL').toUpperCase();
+          const isInvalidAnswer = valCategory === 'PARROT' || valCategory === 'IRRELEVANT';
 
-            {/* Score Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-6">
-              {evaluation.scores && Object.entries(evaluation.scores).map(([key, val]: any) => {
-                const theme = getScoreTheme(val);
-                const descriptions: Record<string, string> = {
-                  communication: 'Clarity & delivery',
-                  confidence: 'Poise & tone',
-                  problemsolving: 'Analytical depth',
-                  behavioralfit: 'Role alignment'
+          const getValidationBadge = (cat: string) => {
+            switch (cat) {
+              case 'PARROT':
+                return {
+                  badge: 'bg-rose-50 text-rose-700 border-rose-200',
+                  text: 'PARROT (Question Repeated)',
+                  desc: 'The response repeated or echoed the question without providing an actual answer. Exactly 1/10 enforced.',
+                  icon: AlertCircle
                 };
-                return (
-                  <div
-                    key={key}
-                    className={`p-4 rounded-2xl border bg-white shadow-xs transition-all hover:shadow-sm ${theme.border}`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-                        {key}
+              case 'IRRELEVANT':
+                return {
+                  badge: 'bg-amber-50 text-amber-700 border-amber-200',
+                  text: 'IRRELEVANT (Off-Topic)',
+                  desc: 'The response did not address the interview question asked. Exactly 1/10 enforced.',
+                  icon: AlertTriangle
+                };
+              case 'PARTIAL':
+                return {
+                  badge: 'bg-blue-50 text-blue-700 border-blue-200',
+                  text: 'PARTIAL (Incomplete Answer)',
+                  desc: 'Relevant points mentioned, but lacks concrete depth, examples, or technical reasoning.',
+                  icon: Info
+                };
+              case 'MEANINGFUL':
+              default:
+                return {
+                  badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                  text: 'MEANINGFUL (Valid Answer)',
+                  desc: 'Clear, relevant, and well-structured answer with meaningful context and practical details.',
+                  icon: CheckCircle2
+                };
+            }
+          };
+
+          const badgeInfo = getValidationBadge(valCategory);
+          const BadgeIcon = badgeInfo.icon;
+
+          return (
+            <div className="space-y-6 animate-fade-in">
+              <div className="bg-white border border-slate-200/80 p-8 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
+                <div>
+                  <div className="mb-4">
+                    {/* Overline */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold tracking-widest text-slate-400 uppercase">
+                        Interview Diagnostic
                       </span>
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${theme.badge}`}>
-                        {val}/10
+                      <span className="text-slate-300">·</span>
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${badgeInfo.badge}`}>
+                        <BadgeIcon className="w-3 h-3" />
+                        {badgeInfo.text}
                       </span>
                     </div>
-                    <div className={`text-3xl font-extrabold ${theme.text}`}>
-                      {val}
-                      <span className="text-sm font-normal text-slate-400">/10</span>
+                    
+                    {/* Title and Timer Badge Row */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
+                        2-Way HR Evaluation Report
+                      </h2>
+                      
+                      {/* The Timer Badge */}
+                      <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-slate-600 text-sm font-medium">
+                        <Clock className="w-4 h-4" />
+                        <span>{formatDuration(sessionDuration)}</span> 
+                      </div>
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1">{descriptions[key.toLowerCase()] || 'Performance metric'}</p>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* Detailed Insights */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white border border-slate-200/80 p-6 rounded-2xl space-y-3 shadow-xs">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Key Strengths Demonstrated</h4>
-                <ul className="text-xs text-slate-700 space-y-2 list-disc list-inside">
-                  {evaluation.strengths?.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                </ul>
+                  <p className="text-sm text-slate-600 mt-2 max-w-xl leading-relaxed">{evaluation.feedbackSummary}</p>
+                </div>
+                <div className={`text-center rounded-2xl p-6 min-w-[130px] shrink-0 border shadow-xs ${
+                  isInvalidAnswer 
+                    ? 'bg-rose-50/70 border-rose-200' 
+                    : 'bg-slate-50 border-slate-200/80'
+                }`}>
+                  <span className={`text-4xl font-extrabold ${isInvalidAnswer ? 'text-rose-600' : 'text-slate-900'}`}>
+                    {evaluation.overallScore}<span className="text-sm text-slate-400">/10</span>
+                  </span>
+                  <span className={`text-[10px] font-bold uppercase block mt-1 ${isInvalidAnswer ? 'text-rose-600' : 'text-slate-500'}`}>
+                    {isInvalidAnswer ? 'Invalid Answer (1/10)' : 'Overall Rating'}
+                  </span>
+                </div>
               </div>
 
-              <div className="bg-white border border-slate-200/80 p-6 rounded-2xl space-y-3 shadow-xs">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Growth Opportunities</h4>
-                <ul className="text-xs text-slate-700 space-y-2 list-disc list-inside">
-                  {evaluation.areasForImprovement?.map((a: string, i: number) => <li key={i}>{a}</li>)}
-                </ul>
+              {/* Score Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-6">
+                {evaluation.scores && Object.entries(evaluation.scores).map(([key, val]: any) => {
+                  const theme = isInvalidAnswer 
+                    ? { border: 'border-rose-200', text: 'text-rose-600', badge: 'bg-rose-50 text-rose-700 border-rose-200' }
+                    : getScoreTheme(val);
+                  const descriptions: Record<string, string> = {
+                    communication: 'Clarity & delivery',
+                    confidence: 'Poise & tone',
+                    problemsolving: 'Analytical depth',
+                    behavioralfit: 'Role alignment'
+                  };
+                  return (
+                    <div
+                      key={key}
+                      className={`p-4 rounded-2xl border bg-white shadow-xs transition-all hover:shadow-sm ${theme.border}`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                          {key}
+                        </span>
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${theme.badge}`}>
+                          {val}/10
+                        </span>
+                      </div>
+                      <div className={`text-3xl font-extrabold ${theme.text}`}>
+                        {val}
+                        <span className="text-sm font-normal text-slate-400">/10</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1">{descriptions[key.toLowerCase()] || 'Performance metric'}</p>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
 
-            {evaluation.proTipForNextInterview && (
-              <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-xs">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.516 0c.85.493 1.509 1.333 1.509 2.316V18" />
+              {/* Question-by-Question Response Audit (Requirement 7) */}
+              {evaluation.questionEvaluations && evaluation.questionEvaluations.length > 0 && (
+                <div className="bg-white border border-slate-200/80 p-6 sm:p-7 rounded-3xl space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                        Question-by-Question Response Audit
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Verification of candidate answers against interviewer questions
+                      </p>
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">
+                      {evaluation.questionEvaluations.length} Turn{evaluation.questionEvaluations.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4 pt-1">
+                    {evaluation.questionEvaluations.map((item: any, idx: number) => {
+                      const itemBadge = getValidationBadge(item.classification);
+                      const ItemIcon = itemBadge.icon;
+                      return (
+                        <div
+                          key={idx}
+                          className="p-4 sm:p-5 rounded-2xl border border-slate-200/90 bg-slate-50/50 space-y-3"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
+                              Question #{idx + 1}
+                            </span>
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border self-start sm:self-auto ${itemBadge.badge}`}>
+                              <ItemIcon className="w-3.5 h-3.5" />
+                              {itemBadge.text}
+                            </span>
+                          </div>
+
+                          <div className="text-sm font-semibold text-slate-900 leading-snug">
+                            "{item.question}"
+                          </div>
+
+                          <div className="p-3.5 rounded-xl bg-white border border-slate-200/70 text-xs text-slate-800 space-y-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                              Candidate's Actual Response
+                            </span>
+                            <p className="italic leading-relaxed text-slate-700">
+                              "{item.answer}"
+                            </p>
+                          </div>
+
+                          {item.critique && (
+                            <div className="text-xs text-slate-600 flex items-start gap-2 pt-0.5">
+                              <span className="text-purple-600 font-bold shrink-0">Evaluator Assessment:</span>
+                              <span className="leading-relaxed">{item.critique}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Detailed Insights */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border border-slate-200/80 p-6 rounded-2xl space-y-3 shadow-xs">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Key Strengths Demonstrated</h4>
+                  <ul className="text-xs text-slate-700 space-y-2 list-disc list-inside">
+                    {evaluation.strengths?.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 p-6 rounded-2xl space-y-3 shadow-xs">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Growth Opportunities</h4>
+                  <ul className="text-xs text-slate-700 space-y-2 list-disc list-inside">
+                    {evaluation.areasForImprovement?.map((a: string, i: number) => <li key={i}>{a}</li>)}
+                  </ul>
+                </div>
+              </div>
+
+              {evaluation.proTipForNextInterview && (
+                <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-xs">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.516 0c.85.493 1.509 1.333 1.509 2.316V18" />
+                    </svg>
+                    <span>Pro Tip for Real Interviews</span>
+                  </h4>
+                  <p className="text-sm text-slate-700 italic leading-relaxed border-l-2 border-purple-600 pl-3 py-1 bg-purple-50/40 rounded-r-lg">
+                    "{evaluation.proTipForNextInterview}"
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setEvaluation(null);
+                    setConversation([]);
+                    setSessionQuestions([]);
+                    setSessionId(null);
+                    setSessionDuration(0);
+                    setSessionStartTime(null);
+                  }}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 active:scale-[0.99] text-white font-bold py-4 rounded-2xl transition-colors shadow-sm shadow-purple-500/20 text-sm cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2.2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  <span>Pro Tip for Real Interviews</span>
-                </h4>
-                <p className="text-sm text-slate-700 italic leading-relaxed border-l-2 border-purple-600 pl-3 py-1 bg-purple-50/40 rounded-r-lg">
-                  "{evaluation.proTipForNextInterview}"
-                </p>
+                  <span>Start New 2-Way Interview Session</span>
+                </button>
+                <a
+                  href="/analytics"
+                  className="bg-slate-100 hover:bg-slate-200 active:scale-[0.99] text-slate-800 font-bold py-4 px-6 rounded-2xl transition-colors text-sm cursor-pointer flex items-center justify-center gap-2 border border-slate-200/80"
+                >
+                  <span>View in Analytics</span>
+                  <ArrowRight className="w-4 h-4" />
+                </a>
               </div>
-            )}
-
-            <button
-              onClick={() => { setEvaluation(null); setConversation([]); setSessionQuestions([]); setSessionId(null); }}
-              className="w-full bg-purple-600 hover:bg-purple-700 active:scale-[0.99] text-white font-bold py-4 rounded-2xl transition-colors shadow-sm shadow-purple-500/20 text-sm cursor-pointer flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2.2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span>Start New 2-Way Interview Session</span>
-            </button>
-          </div>
-        )}
+            </div>
+          );
+        })()}
 
       </div>
 

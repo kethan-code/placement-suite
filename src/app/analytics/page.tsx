@@ -47,6 +47,7 @@ interface MockHrHistoryRecord {
   date: string;
   jobRole?: string;
   overallScore: number;
+  answerValidation?: string;
   turnsCount?: number;
   timestamp?: number;
 }
@@ -59,6 +60,7 @@ interface UnifiedSessionItem {
   score: number;
   date: string;
   timestamp: number;
+  answerValidation?: string;
 }
 
 export default function AnalyticsDashboardPage() {
@@ -236,7 +238,8 @@ export default function AnalyticsDashboardPage() {
       activityName: m.jobRole || '2-Way Technical/HR',
       score: m.overallScore,
       date: m.date || 'Recent',
-      timestamp: m.timestamp || 0
+      timestamp: m.timestamp || 0,
+      answerValidation: m.answerValidation
     }))
   ].sort((a, b) => b.timestamp - a.timestamp);
 
@@ -634,7 +637,19 @@ export default function AnalyticsDashboardPage() {
                           </span>
                         </td>
                         <td className="py-3 text-slate-800 font-medium text-xs sm:text-sm">
-                          {item.activityName}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span>{item.activityName}</span>
+                            {item.answerValidation && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                item.answerValidation === 'PARROT' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                item.answerValidation === 'IRRELEVANT' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                item.answerValidation === 'PARTIAL' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}>
+                                {item.answerValidation}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className={`py-3 font-mono font-bold text-xs sm:text-sm ${scoreColor}`}>
                           {item.score}/100

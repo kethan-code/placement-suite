@@ -1,4 +1,10 @@
 import { NextResponse } from "next/server";
+import {
+  enforceEvaluationRules,
+  generateFallbackEvaluation,
+  extractQAPairs,
+  detectQuestionEcho
+} from "@/lib/interviewEvaluation";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +125,7 @@ function cleanJsonResponse(rawText: string) {
 
 export async function POST(req: Request) {
   try {
-    const { action, conversation, candidateAnswer, jobRole, persona, sessionQuestions = [], recentQuestions = [], apiKey } = await req.json();
+    const { action, conversation = [], candidateAnswer = "", jobRole, persona, sessionQuestions = [], recentQuestions = [], apiKey } = await req.json();
 
     if (!apiKey) {
       return NextResponse.json({ success: false, error: "API key is missing. Please reconnect it." }, { status: 401 });
@@ -172,13 +178,66 @@ export async function POST(req: Request) {
 
       const askedHistoryStr = sessionQuestions.length > 0 ? sessionQuestions.map((q: string) => '- "' + q + '"').join("\n") : "None";
 
-      const systemPrompt = "You are a professional human recruiter conducting a live, interactive 2-way job interview for a candidate applying for: " + jobRoleTitle + ".\nRecruiter Persona: " + personaTone + ".\n\nCRITICAL INTERVIEWING INSTRUCTIONS:\n1. ACTIVELY LISTEN TO THE CANDIDATE: Read the candidate's latest response carefully: \"" + (candidateAnswer || "") + "\"\n2. GENERATE A CONTEXT-AWARE FOLLOW-UP QUESTION: Ask ONE natural follow-up question (8 to 18 words) that directly probes into specific details, projects, technologies, tools, decisions, challenges, or metrics mentioned in the candidate's latest response.\n3. CONVERSATIONAL LOGIC & CONTINUITY: The next question MUST logically continue from what the candidate just said. NEVER ask an unrelated generic question (such as hobbies, 5-year plans, or general strengths) when the candidate is discussing specific experiences or technical details.\n4. DRILL DEEPER STEP-BY-STEP:\n   - If candidate mentioned a specific project/system (e.g. attendance management, backend, website), ask about their specific role, technical choices, or challenges in that project.\n   - If candidate mentioned a problem (e.g. slow database queries, team disagreement), ask what specific steps they took to fix or optimize it.\n   - If candidate mentioned a solution (e.g. added indexes, optimized queries), ask how they measured or verified the performance improvement.\n5. DO NOT REPEAT QUESTIONS: Never repeat any question from previous turns:\n" + askedHistoryStr + "\n6. SHORT ACKNOWLEDGING REACTION: Begin with a brief 1-sentence natural reaction acknowledging what the candidate said (e.g., \"That makes sense.\", \"I see, handling that backend must have required careful planning.\", \"Good approach to query optimization.\").\n7. SINGLE FOCUSED QUESTION ONLY: Ask ONLY ONE question. Do NOT combine multiple questions.\n\nRespond ONLY with a valid JSON object matching this schema:\n{\n  \"interviewerReaction\": \"Brief 1-sentence acknowledging comment.\",\n  \"followUpQuestion\": \"ONE focused context-aware follow-up question (8-18 words) probing candidate's latest answer.\",\n  \"isFinalTurn\": false\n}";
+      // Identify last question asked to candidate
+      const qaPairs = extractQAPairs(conversation || []);
+      const latestQuestion = sessionQuestions[sessionQuestions.length - 1] || (qaPairs.length > 0 ? qaPairs[qaPairs.length - 1].question : "Tell me about your background.");
+      const echoCheck = detectQuestionEcho(latestQuestion, candidateAnswer || "");
 
-      const userPrompt = "COMPLETE INTERVIEW CONVERSATION TRANSCRIPT SO FAR:\n" + historyFormatted + "\n\nCANDIDATE'S LATEST ANSWER TO LISTEN TO:\n\"" + candidateAnswer + "\"\n\nTASK:\nExamine the candidate's latest answer above. Identify the specific project, technology, decision, challenge, or outcome they described. Ask ONE direct, natural follow-up question probing deeper into that exact point.";
+      const systemPrompt = `You are a professional human recruiter conducting a live, interactive 2-way job interview for a candidate applying for: ${jobRoleTitle}.
+Recruiter Persona: ${personaTone}.
+
+CRITICAL ANSWER-AWARE INTERVIEWING RULES:
+1. ACTIVELY EVALUATE THE CANDIDATE'S LATEST ANSWER:
+   Original Question Asked: "${latestQuestion}"
+   Candidate's Transcribed Answer: "${candidateAnswer || ""}"
+
+2. DETECT ANSWER TYPE AND RESPOND ACCORDINGLY:
+   - PARROT (Question Repeated): If candidate repeated or echoed the question without giving an answer, your reaction MUST politely point out that they repeated the question, e.g.:
+     "It sounds like you repeated the question. Could you give your actual response in your own words?"
+     And your followUpQuestion MUST directly prompt for a concrete answer or skill:
+     "In your own words, what is a specific tool or skill you learned, and how did you use it?"
+   - IRRELEVANT (Off-Topic): If the answer has nothing to do with the question, acknowledge and politely redirect them back to the original topic:
+     "I see, though let's focus on the question. Could you tell me specifically about your experience with...?"
+   - PARTIAL (Too brief or lacking detail): Encourage them to elaborate on specific details:
+     "Good start. Could you walk me through a specific project or example where you applied that?"
+   - MEANINGFUL (Concrete answer): Ask ONE focused follow-up question (8 to 18 words) drilling into specific technologies, tools, trade-offs, or measurable outcomes they mentioned.
+
+3. CONVERSATIONAL CONTINUITY & SINGLE QUESTION:
+   - Do NOT ask unrelated questions.
+   - Do NOT repeat questions already asked:
+${askedHistoryStr}
+   - Ask ONLY ONE focused question.
+
+Respond ONLY with a valid JSON object matching this schema:
+{
+  "interviewerReaction": "Brief 1-sentence acknowledging or redirecting comment.",
+  "followUpQuestion": "ONE focused context-aware follow-up question (8-18 words).",
+  "isFinalTurn": false
+}`;
+
+      const userPrompt = `ORIGINAL QUESTION ASKED:
+"${latestQuestion}"
+
+CANDIDATE'S ACTUAL TRANSCRIBED ANSWER:
+"${candidateAnswer}"
+
+FULL TRANSCRIPT SO FAR:
+${historyFormatted}
+
+Generate the next recruiter turn adhering strictly to the answer evaluation rules above.`;
 
       const { text: rawText, modelUsed } = await callGeminiWithFallback(apiKey, systemPrompt, userPrompt);
       const cleaned = cleanJsonResponse(rawText);
-      const resultJson = JSON.parse(cleaned);
+      let resultJson = JSON.parse(cleaned);
+
+      // Deterministic check override if candidate purely echoed the question
+      if (echoCheck.isEcho && !echoCheck.hasSubstantiveAnswer) {
+        resultJson = {
+          interviewerReaction: "It sounds like you repeated the interview question. I would love to hear your actual thoughts in your own words.",
+          followUpQuestion: "In your own words, what is a specific tool or project you worked on recently?",
+          isFinalTurn: false
+        };
+      }
 
       const spokenText = resultJson.interviewerReaction + " " + resultJson.followUpQuestion;
 
@@ -217,24 +276,84 @@ export async function POST(req: Request) {
     }
 
     if (action === "evaluate") {
-      const systemPrompt = "You are a Senior Talent Acquisition Manager evaluating a candidate's complete 2-way HR interview.\nAnalyze the candidate's communication style, confidence, technical/behavioral depth, and relevance across their answers.\nRespond ONLY with a valid JSON object matching this schema:\n{\n  \"overallScore\": 8.5,\n  \"scores\": {\n    \"communication\": 8,\n    \"confidence\": 9,\n    \"problemSolving\": 8,\n    \"behavioralFit\": 9\n  },\n  \"feedbackSummary\": \"Comprehensive 3-4 sentence performance summary.\",\n  \"strengths\": [\"Strong articulate answers\", \"Good STAR structure\"],\n  \"areasForImprovement\": [\"Can be more concise in technical details\"],\n  \"proTipForNextInterview\": \"One actionable high-impact tip.\"\n}";
+      const qaPairs = extractQAPairs(conversation || []);
+      const structuredQandA = qaPairs.map((p, i) => 
+        `Turn ${i + 1}:\n[ORIGINAL QUESTION]: "${p.question}"\n[CANDIDATE'S ACTUAL TRANSCRIBED ANSWER]: "${p.answer}"`
+      ).join("\n\n");
 
-      const historyFormatted = (conversation || [])
-        .map((c: any) => (c.speaker === "interviewer" ? "Interviewer" : "Candidate") + ': "' + c.text + '"')
-        .join("\n");
+      const systemPrompt = `You are an expert HR interview evaluator. You must evaluate the candidate's actual answer against the original interview question.
 
-      const userPrompt = "Target Job Role: " + jobRole + "\nRecruiter Persona: " + (persona || "balanced") + "\nFull Interview Transcript:\n" + historyFormatted + "\n\nProvide the complete interview diagnostic evaluation.";
+First validate the answer, then score it. Never award marks simply because the candidate speaks.
 
-      const { text: rawText, modelUsed } = await callGeminiWithFallback(apiKey, systemPrompt, userPrompt);
-      const cleaned = cleanJsonResponse(rawText);
-      const evalJson = JSON.parse(cleaned);
+If the response is a pure repetition or echo of the question without an actual answer, classify it as PARROT. If it is completely unrelated, classify it as IRRELEVANT.
 
-      return NextResponse.json({ success: true, evaluation: evalJson, modelUsed });
+For both PARROT and IRRELEVANT, all four evaluation categories and the overall rating must be exactly 1/10. Do not award baseline participation points, engagement marks, or unsupported strengths.
+
+If the student repeats part of the question but also provides a meaningful answer, evaluate the meaningful content fairly.
+
+For PARTIAL and MEANINGFUL responses, use the existing scoring rubric and award marks only for skills demonstrated by the response.
+
+Never fabricate examples, achievements, skills, strengths, or evidence that the student did not provide.
+
+Feedback must be specific, constructive, and directly related to the student's actual response.
+
+Respond ONLY with a valid JSON object matching this schema:
+{
+  "answerValidation": "PARROT | IRRELEVANT | PARTIAL | MEANINGFUL",
+  "validationReason": "Clear 1-2 sentence explanation of why this classification was assigned.",
+  "overallScore": 1.0,
+  "scores": {
+    "communication": 1,
+    "confidence": 1,
+    "problemSolving": 1,
+    "behavioralFit": 1
+  },
+  "feedbackSummary": "Comprehensive, honest 3-4 sentence performance summary directly based on their actual answers.",
+  "strengths": ["Demonstrated strength 1", "Demonstrated strength 2"],
+  "areasForImprovement": ["Growth area 1", "Growth area 2"],
+  "proTipForNextInterview": "One actionable high-impact tip.",
+  "questionEvaluations": [
+    {
+      "question": "Original interview question",
+      "answer": "Candidate's transcribed response",
+      "classification": "PARROT | IRRELEVANT | PARTIAL | MEANINGFUL",
+      "critique": "Specific feedback evaluating this answer"
+    }
+  ]
+}`;
+
+      const userPrompt = `Target Job Role: ${jobRole || "General Campus Placement"}
+Recruiter Persona: ${persona || "balanced"}
+
+INTERVIEW QUESTIONS AND CANDIDATE ANSWERS TO EVALUATE:
+${structuredQandA || "No Q&A turns recorded."}
+
+Provide the complete interview diagnostic evaluation following the strict validation and scoring rules.`;
+
+      let rawEvalJson: any = null;
+      let modelUsed: string | undefined = undefined;
+
+      try {
+        const { text: rawText, modelUsed: usedModel } = await callGeminiWithFallback(apiKey, systemPrompt, userPrompt);
+        modelUsed = usedModel;
+        const cleaned = cleanJsonResponse(rawText);
+        rawEvalJson = JSON.parse(cleaned);
+      } catch (aiErr: any) {
+        console.warn("AI evaluation model failed or returned malformed output, falling back to deterministic evaluation:", aiErr.message);
+      }
+
+      // Backend independent validation & strict score enforcement (failsafe against prompt deviations or malformed outputs)
+      const finalEvaluation = rawEvalJson 
+        ? enforceEvaluationRules(rawEvalJson, conversation || [])
+        : generateFallbackEvaluation(conversation || []);
+
+      return NextResponse.json({ success: true, evaluation: finalEvaluation, modelUsed });
     }
 
     return NextResponse.json({ success: false, error: "Invalid action parameter" }, { status: 400 });
 
   } catch (err: any) {
+    console.error("Mock-HR Route uncaught error:", err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
