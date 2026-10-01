@@ -123,6 +123,39 @@ function cleanJsonResponse(rawText: string) {
   return cleaned;
 }
 
+async function generateTTSAudio(apiKey: string, text: string): Promise<string | null> {
+  if (!text || !text.trim()) return null;
+  for (const ttsModel of ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]) {
+    try {
+      const ttsUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + ttsModel + ":generateContent?key=" + apiKey;
+      const ttsRes = await fetch(ttsUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            role: "user",
+            parts: [{ text: `Speak the following text aloud with a professional HR interviewer tone: "${text}"` }]
+          }],
+          generationConfig: {
+            responseMimeType: "audio/mp3"
+          }
+        })
+      });
+
+      if (ttsRes.ok) {
+        const ttsData = await ttsRes.json();
+        const candidatePart = ttsData.candidates?.[0]?.content?.parts?.[0];
+        if (candidatePart?.inlineData?.data) {
+          return candidatePart.inlineData.data;
+        }
+      }
+    } catch (ttsErr) {
+      console.warn("TTS generation error on model " + ttsModel + ":", ttsErr);
+    }
+  }
+  return null;
+}
+
 export async function POST(req: Request) {
   try {
     const { action, conversation = [], candidateAnswer = "", jobRole, persona, sessionQuestions = [], recentQuestions = [], apiKey } = await req.json();
@@ -236,31 +269,76 @@ Return JSON only:
         classifiedIntent = "PARROT";
       }
 
-      let resultJson: any = null;
+      const simplifiedQuestion = currentQuestion;
 
-      if (classifiedIntent === "CLARIFY") {
-        resultJson = {
-          intent: "CLARIFY",
-          interviewerReaction: intentReply || "Certainly, let me repeat or clarify the question.",
-          followUpQuestion: currentQuestion,
-          isFinalTurn: false
-        };
-      } else if (classifiedIntent === "PAUSE") {
-        resultJson = {
-          intent: "PAUSE",
-          interviewerReaction: intentReply || "Take your time! Whenever you are ready, please share your thoughts.",
-          followUpQuestion: currentQuestion,
-          isFinalTurn: false
-        };
-      } else if (classifiedIntent === "PARROT") {
-        resultJson = {
-          intent: "PARROT",
-          interviewerReaction: intentReply || "It sounds like you repeated the interview question. I would love to hear your actual thoughts in your own words.",
-          followUpQuestion: "In your own words, what is a specific tool or project you worked on recently?",
-          isFinalTurn: false
-        };
-      } else {
-        const systemPrompt = `You are a professional human recruiter conducting a live, interactive 2-way job interview for a candidate applying for: ${jobRoleTitle}.
+      // Routing logic inside API handler based on intent
+      switch (classifiedIntent) {
+        case "CLARIFY": {
+          const message = intentReply || `No problem! In short: ${simplifiedQuestion}`;
+          const audioBase64 = await generateTTSAudio(apiKey, message);
+          return NextResponse.json({
+            success: true,
+            type: "INTERVIEWER_SPEAK",
+            message,
+            shouldListenAgain: true,
+            penalize: false,
+            turn: {
+              intent: "CLARIFY",
+              type: "INTERVIEWER_SPEAK",
+              interviewerReaction: message,
+              followUpQuestion: "",
+              isFinalTurn: false
+            },
+            audioBase64,
+            modelUsed
+          });
+        }
+
+        case "PAUSE": {
+          const message = "Take your time. Whenever you're ready.";
+          const audioBase64 = await generateTTSAudio(apiKey, message);
+          return NextResponse.json({
+            success: true,
+            type: "INTERVIEWER_SPEAK",
+            message,
+            shouldListenAgain: true,
+            penalize: false,
+            turn: {
+              intent: "PAUSE",
+              type: "INTERVIEWER_SPEAK",
+              interviewerReaction: message,
+              followUpQuestion: "",
+              isFinalTurn: false
+            },
+            audioBase64,
+            modelUsed
+          });
+        }
+
+        case "PARROT": {
+          const message = "It sounds like you're repeating the question. Could you share your actual answer or example?";
+          const audioBase64 = await generateTTSAudio(apiKey, message);
+          return NextResponse.json({
+            success: true,
+            type: "INTERVIEWER_SPEAK",
+            message,
+            shouldListenAgain: true,
+            penalize: false, // Give them one chance before evaluating a 0/10
+            turn: {
+              intent: "PARROT",
+              type: "INTERVIEWER_SPEAK",
+              interviewerReaction: message,
+              followUpQuestion: "",
+              isFinalTurn: false
+            },
+            audioBase64,
+            modelUsed
+          });
+        }
+
+        case "ANSWER":
+        default: {
+          const systemPrompt = `You are a professional human recruiter conducting a live, interactive 2-way job interview for a candidate applying for: ${jobRoleTitle}.
 Recruiter Persona: ${personaTone}.
 
 CRITICAL ANSWER-AWARE INTERVIEWING RULES:
@@ -288,7 +366,7 @@ Respond ONLY with a valid JSON object matching this schema:
   "isFinalTurn": false
 }`;
 
-        const userPrompt = `ORIGINAL QUESTION ASKED:
+          const userPrompt = `ORIGINAL QUESTION ASKED:
 "${currentQuestion}"
 
 CANDIDATE'S ACTUAL TRANSCRIBED ANSWER:
@@ -299,47 +377,27 @@ ${historyFormatted}
 
 Generate the next recruiter turn adhering strictly to the answer evaluation rules above.`;
 
-        const { text: rawText, modelUsed: turnModelUsed } = await callGeminiWithFallback(apiKey, systemPrompt, userPrompt);
-        modelUsed = turnModelUsed;
-        const cleaned = cleanJsonResponse(rawText);
-        resultJson = JSON.parse(cleaned);
-        resultJson.intent = "ANSWER";
-      }
+          const { text: rawText, modelUsed: turnModelUsed } = await callGeminiWithFallback(apiKey, systemPrompt, userPrompt);
+          modelUsed = turnModelUsed;
+          const cleaned = cleanJsonResponse(rawText);
+          const resultJson = JSON.parse(cleaned);
+          resultJson.intent = "ANSWER";
 
-      const spokenText = resultJson.interviewerReaction + " " + resultJson.followUpQuestion;
+          const spokenText = `${resultJson.interviewerReaction} ${resultJson.followUpQuestion}`.trim();
+          const audioBase64 = await generateTTSAudio(apiKey, spokenText);
 
-      let audioBase64 = null;
-      for (const ttsModel of ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]) {
-        try {
-          const ttsUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + ttsModel + ":generateContent?key=" + apiKey;
-          const ttsRes = await fetch(ttsUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{
-                role: "user",
-                parts: [{ text: "Speak the following text aloud with a professional HR interviewer tone: \"" + spokenText + "\"" }]
-              }],
-              generationConfig: {
-                responseMimeType: "audio/mp3"
-              }
-            })
+          return NextResponse.json({
+            success: true,
+            type: "INTERVIEWER_SPEAK",
+            message: spokenText,
+            shouldListenAgain: !resultJson.isFinalTurn,
+            penalize: false,
+            turn: resultJson,
+            audioBase64,
+            modelUsed
           });
-
-          if (ttsRes.ok) {
-            const ttsData = await ttsRes.json();
-            const candidatePart = ttsData.candidates?.[0]?.content?.parts?.[0];
-            if (candidatePart?.inlineData?.data) {
-              audioBase64 = candidatePart.inlineData.data;
-              break;
-            }
-          }
-        } catch (ttsErr) {
-          console.warn("TTS generation error on model " + ttsModel + ":", ttsErr);
         }
       }
-
-      return NextResponse.json({ success: true, turn: resultJson, audioBase64, modelUsed });
     }
 
     if (action === "evaluate") {

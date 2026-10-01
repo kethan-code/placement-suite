@@ -562,10 +562,11 @@ export default function MockHRPage() {
       });
 
       const data = await res.json();
-      if (data.success && data.turn) {
-        const fullSpokenResponse = `${data.turn.interviewerReaction} ${data.turn.followUpQuestion}`;
+      if (data.success && (data.turn || data.message)) {
+        const fullSpokenResponse = data.message || `${data.turn?.interviewerReaction || ''} ${data.turn?.followUpQuestion || ''}`.trim();
 
-        if (data.turn.followUpQuestion) {
+        // Only register a new follow-up question if this was an actual ANSWER turn
+        if (data.turn?.intent === 'ANSWER' && data.turn.followUpQuestion) {
           setSessionQuestions((prev) => [...prev, data.turn.followUpQuestion]);
           saveToRecentQuestions(data.turn.followUpQuestion);
         }
@@ -581,7 +582,7 @@ export default function MockHRPage() {
         setIsLoadingNextTurn(false);
 
         playAudioOrFallback(fullSpokenResponse, data.audioBase64, () => {
-          if (!data.turn.isFinalTurn) {
+          if (data.shouldListenAgain !== false && !data.turn?.isFinalTurn) {
             startListening();
           }
         });
